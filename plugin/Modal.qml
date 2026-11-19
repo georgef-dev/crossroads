@@ -540,12 +540,10 @@ Item {
           width: parent.width
           spacing: Style.space(12)
 
-          Text {
-            textFormat: Text.PlainText
-            text: "\u{f00ed}"  // nf-md-calendar
+          Mark {
+            anchors.verticalCenter: parent.verticalCenter
+            size: Style.font.display
             color: Commons.Color.accent
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.display
           }
           Label {
             width: parent.width - Style.space(48)

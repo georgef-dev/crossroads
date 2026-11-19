@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 256">
+<rect width="1060" height="256" fill="#0f0f14"/>
+<g transform="translate(0,0)"><rect width="256" height="256" rx="56" fill="#1a1b26"/>
+<rect x="114" y="48" width="28" height="164" rx="14" fill="#c0caf5"/>
+<path d="M128 62 H186 L222 100 L186 138 H128 Z" fill="#e0af68" stroke="#1a1b26" stroke-width="8" stroke-linejoin="round"/>
+<path d="M128 122 H70 L34 160 L70 198 H128 Z" fill="#7aa2f7" stroke="#1a1b26" stroke-width="8" stroke-linejoin="round"/>
+<rect x="110" y="122" width="36" height="16" rx="4" fill="#f7768e"/></g>
+<text x="292" y="150" font-family="JetBrainsMono Nerd Font" font-weight="700" font-size="96" fill="#c0caf5">Crossroads</text>
+<text x="296" y="198" font-family="JetBrainsMono Nerd Font" font-size="28" fill="#7f88b0">where your personal and work days meet</text>
+</svg>

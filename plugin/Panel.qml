@@ -68,7 +68,16 @@ Panel {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "\u{f00ed}"  // nf-md-calendar
+    iconComponent: Component {
+      Item {
+        Mark {
+          x: (parent.width - width) / 2
+          y: (parent.height - height) / 2
+          size: button.iconSize
+          color: root.barForeground
+        }
+      }
+    }
     labelText: root.flagged > 0 ? Commons.I18n.formatNumber(root.flagged) : ""
     tooltipText: ""
 
