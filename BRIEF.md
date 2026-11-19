@@ -22,21 +22,21 @@
 - The view lives in the Omarchy shell.
 - Conflicts are flagged with simple color coding in the view.
 - All-day events are never flagged as conflicts.
-- Unread mail from the example.com inbox shows as a simple list.
+- Unread mail from my personal-domain inbox shows as a simple list.
 - Work events show as separate busy blocks. Consecutive blocks are never merged into one.
 - Time range can be switched between today, today + 1, today + 3, today + 7, and today + 14 days.
 - Data refreshes every hour by default, and the interval is a configuration option.
 
 ## Constraints
 
-- Work calendar: Google Workspace behind company SSO sign-in, shared to you@example.com as free/busy only. Work events have no titles.
-- Personal calendars: mostly iCloud (George, Private, Family, Partner, School), plus you@example.com on Google.
-- Google access goes through an Internal OAuth app on my example.com Workspace. No privacy policy, verification, or publishing.
+- Work calendar: Google Workspace behind company SSO sign-in, shared to my personal-domain Google account as free/busy only. Work events have no titles.
+- Personal calendars: mostly iCloud (several family and personal calendars), plus my personal-domain Google calendar.
+- Google access goes through an Internal OAuth app on my personal-domain Workspace. No privacy policy, verification, or publishing.
 - About 5 calendars in total.
-- Email: the you@example.com inbox in v1.
+- Email: my personal-domain inbox in v1.
 - v1 runs on Omarchy as an Omarchy shell plugin, with both a bar widget and a panel.
-- Everything stays local. Using the Google and iCloud services is fine, but Crossroads itself stays on my machine.
-- Don't publish Crossroads to GitHub yet.
+- Everything stays local. Using the Google and iCloud services is fine, but Crossroads and my data stay on my machine.
+- The code is public on GitHub (georgef-dev/crossroads), with no personal data in the repository.
 
 ## Non-goals
 
@@ -57,4 +57,4 @@
 ## Open questions
 
 - Does "stays local" also rule out any self-hosted sync between my devices once more platforms land?
-- The you@icloud.com inbox: a privacy page so it can use an External app, IMAP with an app password, or leave it out.
+- My @gmail.com inbox: a privacy page so it can use an External app, IMAP with an app password, or leave it out.
