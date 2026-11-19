@@ -18,6 +18,11 @@ Crossroads brings into focus what needs your attention right now.
 
 Everything is searchable, and one keypress opens the event or email where it lives.
 
+<p align="center">
+  <img src="assets/screenshot.png" alt="The Crossroads view: overlap cards for the week, today's strip, and the range picker. All data is made up." width="640">
+  <br><sub>Made-up data. Colors follow your Omarchy theme.</sub>
+</p>
+
 ## Status
 
 - Runs on [Omarchy](https://omarchy.org) as a shell plugin: an icon in the bar, and a full view on **Super+Alt+C**. A Mac version is planned.
