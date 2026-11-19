@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  specs:
+    name: TLA+ specs
+    runs-on: ubuntu-latest
+    env:
+      TLA2TOOLS_VERSION: v1.7.4
+      TLA2TOOLS_SHA256: 936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Download TLC
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/tla2tools.jar" \
+            "https://github.com/tlaplus/tlaplus/releases/download/$TLA2TOOLS_VERSION/tla2tools.jar"
+          echo "$TLA2TOOLS_SHA256  $RUNNER_TEMP/tla2tools.jar" | sha256sum --check
+      - run: make check TLC="java -XX:+UseParallelGC -cp $RUNNER_TEMP/tla2tools.jar tlc2.TLC"
+
+  tests:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: make test

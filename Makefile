@@ -1,4 +1,6 @@
 VENV := .venv
+# The TLC command; CI points this at a pinned tla2tools.jar.
+TLC ?= tlc
 PY := $(VENV)/bin/python
 DEPS := $(VENV)/.installed
 
@@ -12,7 +14,7 @@ PLUGIN_DIR := $(HOME)/.config/omarchy/plugins/georgef.crossroads
 check:
 	@set -e; cd specs; for spec in *.tla; do \
 		log=/tmp/crossroads-tlc/$${spec%.tla}.log; mkdir -p /tmp/crossroads-tlc; \
-		if tlc -workers auto -metadir /tmp/crossroads-tlc/$${spec%.tla} $$spec > $$log 2>&1; \
+		if $(TLC) -workers auto -metadir /tmp/crossroads-tlc/$${spec%.tla} $$spec > $$log 2>&1; \
 		then echo "$$spec: ok"; else echo "$$spec: FAILED (see $$log)"; exit 1; fi; \
 	done
 
@@ -24,7 +26,7 @@ $(DEPS): pyproject.toml
 # Fixed timezone so the plugin's day boundaries are the same everywhere.
 test: $(DEPS)
 	$(PY) -m pytest -q
-	TZ=America/New_York node --test plugin/tests/
+	TZ=America/New_York node --test plugin/tests/*.test.js
 
 # The fetcher is an editable install, so source changes apply on the next fetch.
 install:
