@@ -1,7 +1,7 @@
 [project]
-name = "omaview"
+name = "crossroads-app"
 version = "0.1.0"
-description = "Fetches calendars and mail for the Omaview Omarchy shell plugin"
+description = "Fetches calendars and mail for the Crossroads Omarchy shell plugin"
 requires-python = ">=3.12"
 dependencies = [
     "requests",
@@ -17,7 +17,7 @@ dev = [
 ]
 
 [project.scripts]
-omaview = "omaview.cli:main"
+crossroads = "crossroads.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

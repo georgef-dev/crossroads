@@ -3,16 +3,16 @@ PY := $(VENV)/bin/python
 DEPS := $(VENV)/.installed
 
 # Where `make install` puts the fetcher and the shell plugin.
-PREFIX := $(HOME)/.local/share/omaview
-PLUGIN_DIR := $(HOME)/.config/omarchy/plugins/georgef.omaview
+PREFIX := $(HOME)/.local/share/crossroads
+PLUGIN_DIR := $(HOME)/.config/omarchy/plugins/georgef.crossroads
 
 .PHONY: check test install validate
 
 # Model-check every spec against its .cfg. TLC metadata stays out of the repo.
 check:
 	@set -e; cd specs; for spec in *.tla; do \
-		log=/tmp/omaview-tlc/$${spec%.tla}.log; mkdir -p /tmp/omaview-tlc; \
-		if tlc -workers auto -metadir /tmp/omaview-tlc/$${spec%.tla} $$spec > $$log 2>&1; \
+		log=/tmp/crossroads-tlc/$${spec%.tla}.log; mkdir -p /tmp/crossroads-tlc; \
+		if tlc -workers auto -metadir /tmp/crossroads-tlc/$${spec%.tla} $$spec > $$log 2>&1; \
 		then echo "$$spec: ok"; else echo "$$spec: FAILED (see $$log)"; exit 1; fi; \
 	done
 
@@ -34,9 +34,9 @@ install:
 	rsync -a --delete --exclude tests plugin/ $(PLUGIN_DIR)/
 	omarchy plugin validate $(PLUGIN_DIR)
 	omarchy-shell shell rescanPlugins
-	omarchy plugin enable georgef.omaview
+	omarchy plugin enable georgef.crossroads
 
 validate:
-	@rm -rf /tmp/omaview-validate/georgef.omaview && mkdir -p /tmp/omaview-validate
-	@rsync -a --exclude tests plugin/ /tmp/omaview-validate/georgef.omaview/
-	omarchy plugin validate /tmp/omaview-validate/georgef.omaview
+	@rm -rf /tmp/crossroads-validate/georgef.crossroads && mkdir -p /tmp/crossroads-validate
+	@rsync -a --exclude tests plugin/ /tmp/crossroads-validate/georgef.crossroads/
+	omarchy plugin validate /tmp/crossroads-validate/georgef.crossroads

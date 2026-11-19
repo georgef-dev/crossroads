@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
-from omaview import snapshot
-from omaview.config import Account, Calendar
-from omaview.conflicts import Event
-from omaview.google import Mail
+from crossroads import snapshot
+from crossroads.config import Account, Calendar
+from crossroads.conflicts import Event
+from crossroads.google import Mail
 
 NOW = datetime(2026, 11, 17, 7, tzinfo=timezone.utc)
 FAMILY = Calendar("primary", "personal")

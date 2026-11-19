@@ -2,8 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 
-from omaview.config import Calendar
-from omaview.google import BUSY, event_from_google, mail_from_gmail
+from crossroads.config import Calendar
+from crossroads.google import BUSY, event_from_google, mail_from_gmail
 
 ME = "you@example.com"
 

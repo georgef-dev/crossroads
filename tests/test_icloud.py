@@ -2,8 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 
-from omaview.config import Calendar
-from omaview.icloud import calendar_data, calendars_in, events_from_ics, href_of
+from crossroads.config import Calendar
+from crossroads.icloud import calendar_data, calendars_in, events_from_ics, href_of
 
 FAMILY = Calendar("/123/calendars/home/", "personal")
 ME = "me@icloud.com"

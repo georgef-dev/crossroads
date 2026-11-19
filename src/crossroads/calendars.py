@@ -1,7 +1,7 @@
 """Every calendar each configured account can see, with its current tag, for the settings view."""
 
-from omaview import google, icloud
-from omaview.config import Account
+from crossroads import google, icloud
+from crossroads.config import Account
 
 
 def list_for(provider: str, account: str) -> list[tuple[str, str]]:

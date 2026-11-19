@@ -6,7 +6,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
-// The Omaview modal: overlaps, today and unread mail at a glance, with a
+// The Crossroads modal: overlaps, today and unread mail at a glance, with a
 // search across everything. Toggled by the service's global shortcut.
 Item {
   id: root
@@ -68,7 +68,7 @@ Item {
 
   function dismiss() {
     root.opened = false
-    if (root.shell && typeof root.shell.hide === "function") root.shell.hide("georgef.omaview")
+    if (root.shell && typeof root.shell.hide === "function") root.shell.hide("georgef.crossroads")
   }
 
   function toggle() {
@@ -146,7 +146,7 @@ Item {
     flick.contentY = 0
   }
 
-  // A setting saves to shell.json; a calendar tag goes through `omaview tag`.
+  // A setting saves to shell.json; a calendar tag goes through `crossroads tag`.
   function changeRow(row, value) {
     if (!row || !root.service) return
     if (row.kind === "setting") root.service.saveSetting(row.key, value)
@@ -451,7 +451,7 @@ Item {
   OverlayWindow {
     id: panel
     shown: root.opened
-    WlrLayershell.namespace: "omaview"
+    WlrLayershell.namespace: "crossroads"
 
     Rectangle {
       anchors.fill: parent

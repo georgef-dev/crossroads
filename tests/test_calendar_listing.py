@@ -1,7 +1,7 @@
-"""`omaview calendars --json`: every calendar each configured account can see, with its tag."""
+"""`crossroads calendars --json`: every calendar each configured account can see, with its tag."""
 
-from omaview.calendars import listing
-from omaview.config import Account, Calendar
+from crossroads.calendars import listing
+from crossroads.config import Account, Calendar
 
 GOOGLE = Account("google", "you@example.com", True, (Calendar("you@example.com", "personal", "Mine"),))
 ICLOUD = Account("icloud", "me@icloud.com", False, (Calendar("/1/home/", "personal", "George"),))

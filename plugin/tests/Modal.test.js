@@ -79,7 +79,7 @@ test("enter opens the item's link; a card opens its first event", () => {
   assert.equal(Model.linkOf(null), "")
 })
 
-test("only links to the services Omaview reads can open", () => {
+test("only links to the services Crossroads reads can open", () => {
   for (const ok of ["https://www.google.com/calendar/event?eid=abc",
                     "https://calendar.google.com/calendar/r/day/2026/11/17?authuser=gf%40x.com",
                     "https://mail.google.com/mail/?authuser=gf#all/t1",

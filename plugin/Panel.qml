@@ -4,19 +4,19 @@ import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
-// Omaview: calendar overlaps and unread mail. The plugin's service fetches;
+// Crossroads: calendar overlaps and unread mail. The plugin's service fetches;
 // this widget filters and draws.
 Panel {
   id: root
-  moduleName: "georgef.omaview"
-  ipcTarget: "georgef.omaview"
+  moduleName: "georgef.crossroads"
+  ipcTarget: "georgef.crossroads"
 
 
   readonly property color foreground: bar ? bar.foreground : Commons.Color.foreground
   readonly property color dim: Qt.darker(foreground, 1.5)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
-  readonly property var service: bar && bar.shell ? bar.shell.serviceFor("georgef.omaview") : null
+  readonly property var service: bar && bar.shell ? bar.shell.serviceFor("georgef.crossroads") : null
   readonly property var snapshot: service ? service.snapshot : null
   readonly property string runError: service && service.runFailed ? strings.t("status.runFailed") : ""
   property int rangeDays: Model.DEFAULT_RANGE
@@ -306,7 +306,7 @@ Panel {
           }
 
           Repeater {
-            model: (root.runError ? [{ source: "omaview", message: root.runError }] : []).concat(root.snapshot ? root.snapshot.errors : [])
+            model: (root.runError ? [{ source: "crossroads", message: root.runError }] : []).concat(root.snapshot ? root.snapshot.errors : [])
 
             Text {
               required property var modelData

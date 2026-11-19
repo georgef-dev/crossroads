@@ -1,5 +1,5 @@
 """Property-based tests derived from the invariants in specs/Settings.tla, for
-`omaview tag` (config.set_tag). The properties are restated from the spec's
+`crossroads tag` (config.set_tag). The properties are restated from the spec's
 English lines and read the file back, so they don't share the code under test.
 """
 
@@ -11,8 +11,8 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from omaview import config
-from omaview.config import ConfigError, set_tag
+from crossroads import config
+from crossroads.config import ConfigError, set_tag
 
 ACCOUNT = "me@icloud.com"
 CALENDARS = ["home", "family", "work"]

@@ -12,9 +12,9 @@ from secrets import token_urlsafe
 
 import requests
 
-from omaview import secrets
-from omaview.config import Calendar
-from omaview.conflicts import Event
+from crossroads import secrets
+from crossroads.config import Calendar
+from crossroads.conflicts import Event
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
@@ -159,14 +159,14 @@ def save_client(client_file: str) -> None:
 def _client() -> dict:
     stored = secrets.get(secrets.GOOGLE_CLIENT, "default")
     if not stored:
-        raise GoogleError("no Google OAuth client; run: omaview auth google-client <client_secret.json>")
+        raise GoogleError("no Google OAuth client; run: crossroads auth google-client <client_secret.json>")
     return json.loads(stored)
 
 
 def _access_token(account: str) -> str:
     refresh_token = secrets.get(secrets.GOOGLE_TOKEN, account)
     if not refresh_token:
-        raise GoogleError(f"{account} is not signed in; run: omaview auth google {account}")
+        raise GoogleError(f"{account} is not signed in; run: crossroads auth google {account}")
     client = _client()
     response = requests.post(client["token_uri"], timeout=TIMEOUT, data={
         "client_id": client["client_id"],
@@ -194,7 +194,7 @@ def sign_in(account: str) -> None:
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
             self.end_headers()
-            self.wfile.write(b"Omaview is signed in. You can close this tab.")
+            self.wfile.write(b"Crossroads is signed in. You can close this tab.")
 
         def log_message(self, *args):
             pass

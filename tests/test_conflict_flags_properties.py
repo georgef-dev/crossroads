@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from hypothesis import given
 from hypothesis import strategies as st
 
-from omaview.conflicts import KINDS, MIXED, NONE, PERSONAL, STATUSES, WORK, Event, classify, overlaps
+from crossroads.conflicts import KINDS, MIXED, NONE, PERSONAL, STATUSES, WORK, Event, classify, overlaps
 
 BASE = datetime(2026, 11, 17, 8, tzinfo=timezone.utc)
 SLOT = timedelta(minutes=30)

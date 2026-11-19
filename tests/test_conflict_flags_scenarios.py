@@ -4,7 +4,7 @@ from datetime import datetime, time, timezone
 
 from pytest_bdd import given, scenarios, then, when
 
-from omaview.conflicts import Event, classify, overlaps
+from crossroads.conflicts import Event, classify, overlaps
 
 scenarios("conflict_flags.feature")
 
@@ -37,7 +37,7 @@ def these_events(datatable):
     ]
 
 
-@when("Omaview classifies them", target_fixture="kinds")
+@when("Crossroads classifies them", target_fixture="kinds")
 def classify_them(events):
     return {(event.id, event.calendar): kind for event, kind in zip(events, classify(events))}
 
@@ -48,7 +48,7 @@ def the_kinds_are(kinds, datatable):
     assert kinds == expected
 
 
-@when("Omaview builds the overlap cards", target_fixture="cards")
+@when("Crossroads builds the overlap cards", target_fixture="cards")
 def build_cards(events):
     # A list, not a dict, so a duplicate card for the same pair shows up.
     return sorted(

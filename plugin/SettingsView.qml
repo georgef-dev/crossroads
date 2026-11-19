@@ -197,7 +197,7 @@ Column {
 
   Label {
     width: root.width
-    text: root.t("settings.addAccount").arg("omaview auth google <email>  ·  omaview auth icloud <apple-id>")
+    text: root.t("settings.addAccount").arg("crossroads auth google <email>  ·  crossroads auth icloud <apple-id>")
     color: root.dim
     font.pixelSize: Style.font.bodySmall
   }

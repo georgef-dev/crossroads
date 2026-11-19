@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "georgef.omaview",
-  "name": "Omaview",
+  "id": "georgef.crossroads",
+  "name": "Crossroads",
   "version": "0.1.0",
   "author": "George Ferreira",
-  "description": "Personal and work calendars in one view, with overlaps color-coded, plus unread mail. Open the modal with hl.dsp.global(\"omaview:toggle\").",
+  "description": "Personal and work calendars in one view, with overlaps color-coded, plus unread mail. Open the modal with hl.dsp.global(\"crossroads:toggle\").",
   "kinds": [
     "bar-widget",
     "menu",
@@ -16,7 +16,7 @@
     "service": "Service.qml"
   },
   "barWidget": {
-    "displayName": "Omaview",
+    "displayName": "Crossroads",
     "description": "Calendar overlaps and unread mail at a glance.",
     "category": "Info",
     "allowMultiple": false,

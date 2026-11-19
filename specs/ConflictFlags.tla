@@ -1,5 +1,5 @@
 ---------------------------- MODULE ConflictFlags ----------------------------
-\* How Omaview flags overlapping calendar events, which kind of overlap each
+\* How Crossroads flags overlapping calendar events, which kind of overlap each
 \* event shows (none, same tag, or personal + work), and the overlap cards
 \* it shows for each colliding pair of events.
 EXTENDS Naturals, FiniteSets

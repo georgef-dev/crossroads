@@ -1,4 +1,4 @@
-"""omaview: sign in to accounts, list their calendars, and fetch a snapshot for the plugin."""
+"""crossroads: sign in to accounts, list their calendars, and fetch a snapshot for the plugin."""
 
 import argparse
 import getpass
@@ -6,12 +6,12 @@ import json
 import sys
 from datetime import datetime
 
-from omaview import calendars as calendar_listing
-from omaview import config, google, icloud, snapshot
+from crossroads import calendars as calendar_listing
+from crossroads import config, google, icloud, snapshot
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="omaview")
+    parser = argparse.ArgumentParser(prog="crossroads")
     commands = parser.add_subparsers(dest="command", required=True)
 
     auth = commands.add_parser("auth", help="sign in to an account").add_subparsers(dest="provider", required=True)
@@ -49,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("calendars needs a provider and an account, or --json")
         return _calendars(args.provider, args.account)
     except (config.ConfigError, google.GoogleError, icloud.ICloudError, OSError) as error:
-        print(f"omaview: {error}", file=sys.stderr)
+        print(f"crossroads: {error}", file=sys.stderr)
         return 1
 
 

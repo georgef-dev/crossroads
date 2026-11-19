@@ -37,7 +37,7 @@ test("Settings.OtherSettingsSurvive: changing one setting leaves every other set
 })
 
 test("withSetting never carries the widget id into the settings", () => {
-  assert.deepEqual(Model.withSetting({ id: "georgef.omaview", keys: "vim" }, "defaultRange", 3), { keys: "vim", defaultRange: 3 })
+  assert.deepEqual(Model.withSetting({ id: "georgef.crossroads", keys: "vim" }, "defaultRange", 3), { keys: "vim", defaultRange: 3 })
 })
 
 test("values cycle through their options and wrap", () => {
@@ -98,7 +98,7 @@ test("Ctrl+, opens settings from the main view, in every preset and mode", () =>
   }
 })
 
-test("the calendar listing from `omaview calendars --json` is validated and bounded", () => {
+test("the calendar listing from `crossroads calendars --json` is validated and bounded", () => {
   assert.equal(Model.parseListing(""), null)
   assert.equal(Model.parseListing("{}"), null)
   assert.deepEqual(Model.parseListing("[]"), [])

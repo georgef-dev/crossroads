@@ -2,9 +2,9 @@
 
 from datetime import datetime, time, timedelta
 
-from omaview import google, icloud
-from omaview.config import Account
-from omaview.conflicts import MIXED, SAME, classify, overlaps
+from crossroads import google, icloud
+from crossroads.config import Account
+from crossroads.conflicts import MIXED, SAME, classify, overlaps
 
 DAYS = 15  # today plus the 14 days the panel can show
 MAX_EVENTS = 500

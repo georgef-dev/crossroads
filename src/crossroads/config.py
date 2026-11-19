@@ -1,4 +1,4 @@
-"""Accounts and calendar tags from ~/.config/omaview/config.json. Never holds secrets.
+"""Accounts and calendar tags from ~/.config/crossroads/config.json. Never holds secrets.
 
 Example:
     {
@@ -19,7 +19,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from omaview.conflicts import TAGS
+from crossroads.conflicts import TAGS
 
 PROVIDERS = ("google", "icloud")
 
@@ -45,7 +45,7 @@ class Account:
 
 def default_path() -> Path:
     config_home = os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config"
-    return Path(config_home) / "omaview" / "config.json"
+    return Path(config_home) / "crossroads" / "config.json"
 
 
 def load(path: Path | None = None) -> list[Account]:

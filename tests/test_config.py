@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from omaview.config import Account, Calendar, ConfigError, load
+from crossroads.config import Account, Calendar, ConfigError, load
 
 
 def write(tmp_path, data):

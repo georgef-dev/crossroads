@@ -7,7 +7,7 @@
   "mail.empty": "No unread mail",
   "status.fetching": "Fetching…",
   "status.updated": "Updated %1",
-  "status.runFailed": "Couldn't read omaview fetch output",
+  "status.runFailed": "Couldn't read crossroads fetch output",
   "modal.placeholder": "Search events and mail…",
   "modal.noMatches": "No matches",
   "section.overlaps": "Heads up",

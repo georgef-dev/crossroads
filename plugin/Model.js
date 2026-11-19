@@ -1,5 +1,5 @@
-// Pure range, grouping and color math for the Omaview panel. The snapshot
-// comes from `omaview fetch`, which already computed each event's kind.
+// Pure range, grouping and color math for the Crossroads panel. The snapshot
+// comes from `crossroads fetch`, which already computed each event's kind.
 
 var RANGES = [0, 1, 3, 7, 14]
 var DEFAULT_RANGE = 7
@@ -266,7 +266,7 @@ function settingsRows(entry, listing) {
   return rows
 }
 
-// The listing with one calendar's tag changed, shown before `omaview tag`
+// The listing with one calendar's tag changed, shown before `crossroads tag`
 // finishes so the next key press cycles from what the user sees.
 function withTag(listing, row, choice) {
   if (!listing) return listing
@@ -337,7 +337,7 @@ function linkOf(item) {
   return safeLink(link)
 }
 
-// Links come from command output, so only open the services Omaview reads.
+// Links come from command output, so only open the services Crossroads reads.
 var SAFE_LINK = /^https:\/\/(www\.google\.com\/calendar\/|calendar\.google\.com\/|mail\.google\.com\/|www\.icloud\.com\/calendar\/)[^\s\u0000-\u001f\u007f]*$/
 
 function safeLink(link) {

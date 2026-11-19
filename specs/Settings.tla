@@ -1,5 +1,5 @@
 ------------------------------ MODULE Settings ------------------------------
-\* How Omaview saves its settings: the widget's shell.json entry, which the
+\* How Crossroads saves its settings: the widget's shell.json entry, which the
 \* shell replaces whole on every change, and the calendar tags in
 \* config.json, which are rewritten through a temp file and a rename.
 EXTENDS Naturals, FiniteSets
@@ -60,7 +60,7 @@ ChangeSetting(k, v) ==
     /\ changes' = changes + 1
     /\ UNCHANGED <<disk, diskBefore, temp, pending, committed>>
 
-\* The user picks a tag; omaview writes the new config to a temp file.
+\* The user picks a tag; crossroads writes the new config to a temp file.
 StartTag(c, choice) ==
     /\ changes < MaxChanges
     /\ pending = NONE
@@ -80,7 +80,7 @@ Commit ==
     /\ pending' = NONE
     /\ UNCHANGED <<entry, entryBefore, changedKey, changes>>
 
-\* omaview dies before the rename: the temp file is abandoned.
+\* crossroads dies before the rename: the temp file is abandoned.
 Crash ==
     /\ pending # NONE
     /\ temp' = NONE

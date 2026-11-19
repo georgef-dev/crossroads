@@ -5,8 +5,8 @@ import json
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from omaview import config
-from omaview.config import set_tag
+from crossroads import config
+from crossroads.config import set_tag
 
 scenarios("settings.feature")
 

@@ -8,9 +8,9 @@ import icalendar
 import recurring_ical_events
 import requests
 
-from omaview import secrets
-from omaview.config import Calendar
-from omaview.conflicts import Event
+from crossroads import secrets
+from crossroads.config import Calendar
+from crossroads.conflicts import Event
 
 SERVER = "https://caldav.icloud.com/"
 # iCloud has no per-event web links, so events open the calendar web app.
@@ -151,7 +151,7 @@ def _propfind(account: str, url: str, prop: str) -> str:
 def _request(account: str, method: str, url: str, body: str, depth: str) -> str:
     password = secrets.get(secrets.ICLOUD_PASSWORD, account)
     if not password:
-        raise ICloudError(f"{account} is not signed in; run: omaview auth icloud {account}")
+        raise ICloudError(f"{account} is not signed in; run: crossroads auth icloud {account}")
     if urllib.parse.urlsplit(url).scheme != "https" or not urllib.parse.urlsplit(url).hostname.endswith(".icloud.com"):
         raise ICloudError(f"refusing to send credentials to {url}")
     response = requests.request(

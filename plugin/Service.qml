@@ -6,14 +6,14 @@ import "Model.js" as Model
 
 // One shared data store: fetches on a timer and holds the last good snapshot,
 // so the bar widget on every monitor and the modal read the same data and
-// each refresh runs `omaview fetch` once. It also saves settings.
+// each refresh runs `crossroads fetch` once. It also saves settings.
 Item {
   id: root
 
   property var shell: null
 
-  readonly property string pluginId: "georgef.omaview"
-  readonly property string omaviewPath: Quickshell.env("HOME") + "/.local/share/omaview/venv/bin/omaview"
+  readonly property string pluginId: "georgef.crossroads"
+  readonly property string crossroadsPath: Quickshell.env("HOME") + "/.local/share/crossroads/venv/bin/crossroads"
 
   // The widget's shell.json entry, set by the bar widget. Saving replaces it whole.
   property var entry: ({})
@@ -52,12 +52,12 @@ Item {
     if (!calendarsProc.running) calendarsProc.running = true
   }
 
-  // Shown at once, then written in order. Values go to omaview as separate
+  // Shown at once, then written in order. Values go to crossroads as separate
   // arguments, never through a shell.
   function setTag(row, choice) {
     root.tagError = ""
     root.listing = Model.withTag(root.listing, row, choice)
-    root.tagQueue = root.tagQueue.concat([[root.omaviewPath, "tag", row.provider, row.account, row.id, choice, "--name", row.name]])
+    root.tagQueue = root.tagQueue.concat([[root.crossroadsPath, "tag", row.provider, row.account, row.id, choice, "--name", row.name]])
     root.writeNextTag()
   }
 
@@ -72,7 +72,7 @@ Item {
 
   Process {
     id: fetchProc
-    command: [root.omaviewPath, "fetch"]
+    command: [root.crossroadsPath, "fetch"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
@@ -85,7 +85,7 @@ Item {
 
   Process {
     id: calendarsProc
-    command: [root.omaviewPath, "calendars", "--json"]
+    command: [root.crossroadsPath, "calendars", "--json"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.listing = Model.parseListing(text) || []
@@ -117,11 +117,11 @@ Item {
     onTriggered: root.refresh()
   }
 
-  // Bound in Hyprland as hl.dsp.global("omaview:toggle").
+  // Bound in Hyprland as hl.dsp.global("crossroads:toggle").
   GlobalShortcut {
-    appid: "omaview"
+    appid: "crossroads"
     name: "toggle"
-    description: "Toggle the Omaview modal"
+    description: "Toggle the Crossroads modal"
     onPressed: root.toggleModal()
   }
 }
