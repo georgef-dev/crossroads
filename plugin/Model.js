@@ -144,6 +144,11 @@ function keyPreset(value) {
   return KEY_PRESETS.indexOf(value) !== -1 ? value : "default"
 }
 
+// Vim keys open in normal mode, ready to move; default keys open ready to search.
+function initialMode(preset) {
+  return keyPreset(preset) === "vim" ? "normal" : "insert"
+}
+
 // What a key press does, or "" when the modal should treat it as typing.
 // `key` is a name ("Up", "Escape", "Tab", "Backtab", "Return", ...) or the
 // character typed. Vim mode has two modes: insert types into the search,
@@ -415,6 +420,7 @@ if (typeof module !== "undefined") module.exports = {
   nextRange: nextRange,
   modalSections: modalSections,
   keyPreset: keyPreset,
+  initialMode: initialMode,
   DEFAULT_SHORTCUT: DEFAULT_SHORTCUT,
   shortcutFromKey: shortcutFromKey,
   shortcutLabel: shortcutLabel,

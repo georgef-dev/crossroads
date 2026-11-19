@@ -56,7 +56,7 @@ Item {
     root.filterText = ""
     root.selectedIndex = 0
     root.now = new Date()
-    root.mode = "insert"
+    root.mode = Model.initialMode(root.keyPreset)
     root.view = "main"
     root.capturing = false
     root.previousKey = ""

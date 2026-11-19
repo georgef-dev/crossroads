@@ -183,3 +183,9 @@ test("first and last are the ends of the whole list, across sections", () => {
   assert.equal(Model.edge(layout, "last"), 8)
   assert.equal(Model.edge(sections(), "last"), 0)
 })
+
+test("vim keys open in normal mode; default keys type straight away", () => {
+  assert.equal(Model.initialMode("vim"), "normal")
+  assert.equal(Model.initialMode("default"), "insert")
+  assert.equal(Model.initialMode(undefined), "insert")
+})
