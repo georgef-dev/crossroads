@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "georgef.omaview",
+  "name": "Omaview",
+  "version": "0.1.0",
+  "author": "George Ferreira",
+  "description": "Personal and work calendars in one view, with overlaps color-coded, plus unread mail. Open the modal with hl.dsp.global(\"omaview:toggle\").",
+  "kinds": [
+    "bar-widget",
+    "menu",
+    "service"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml",
+    "menu": "Modal.qml",
+    "service": "Service.qml"
+  },
+  "barWidget": {
+    "displayName": "Omaview",
+    "description": "Calendar overlaps and unread mail at a glance.",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshMinutes": 60,
+      "keys": "default"
+    }
+  },
+  "keepLoaded": true
+}

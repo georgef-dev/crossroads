@@ -1,0 +1,31 @@
+[project]
+name = "omaview"
+version = "0.1.0"
+description = "Fetches calendars and mail for the Omaview Omarchy shell plugin"
+requires-python = ">=3.12"
+dependencies = [
+    "requests",
+    "icalendar",
+    "recurring-ical-events",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "hypothesis",
+    "pytest-bdd",
+]
+
+[project.scripts]
+omaview = "omaview.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+bdd_features_base_dir = "tests/features"
