@@ -17,6 +17,7 @@ DESCRIPTION = "Crossroads"
 MODIFIERS = {"SUPER": 64, "CTRL": 4, "ALT": 8, "SHIFT": 1}  # in the order they're written
 KEYS = {*"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", *(f"F{n}" for n in range(1, 13)), "SPACE"}
 BIND_LINE = re.compile(r'^o\.bind\("([^"]+)"')
+REQUIRE = 'require("hypr.crossroads")'
 
 
 class ShortcutError(Exception):
@@ -49,16 +50,16 @@ def show(directory: Path | None = None) -> str:
     return DEFAULT
 
 
-def set_shortcut(combo: str, directory: Path | None = None, binds=None, reload=None) -> str:
+def set_shortcut(combo: str, directory: Path | None = None, binds=None, reload=None, *, loaded_check=True) -> str:
     """Bind Crossroads to `combo`, unless another binding uses it. Returns the saved combination."""
     directory = directory or hypr_dir()
     binds = binds or hyprctl_binds
-    reload = reload or (lambda: subprocess.run(["hyprctl", "reload"], capture_output=True, check=True))
+    reload = reload or _hyprctl_reload
     combo = canonical(combo)
 
     hyprland = directory / "hyprland.lua"
-    if 'require("hypr.crossroads")' not in (hyprland.read_text() if hyprland.exists() else ""):
-        raise ShortcutError(f'{hyprland} must load the shortcut: add require("hypr.crossroads")')
+    if loaded_check and REQUIRE not in (hyprland.read_text() if hyprland.exists() else ""):
+        raise ShortcutError(f"{hyprland} must load the shortcut with {REQUIRE}: run crossroads setup shortcut")
 
     def refuse_if_taken():
         taken_by = _taken_by(combo, binds())
@@ -72,6 +73,37 @@ def set_shortcut(combo: str, directory: Path | None = None, binds=None, reload=N
     write_atomically(directory / "crossroads.lua", _lua(combo), before_replace=refuse_if_taken)
     reload()
     return combo
+
+
+def setup(directory: Path | None = None, binds=None, reload=None) -> None:
+    """Bind Crossroads in Hyprland: write crossroads.lua, then load it from hyprland.lua.
+
+    That order means Hyprland never loads a file that doesn't exist yet. A
+    shortcut already chosen is kept, and running setup again changes nothing.
+    """
+    directory = directory or hypr_dir()
+    reload = reload or _hyprctl_reload
+    hyprland = directory / "hyprland.lua"
+    if not hyprland.exists():
+        raise ShortcutError(f"no {hyprland}; is Hyprland set up?")
+
+    changed = False
+    if not (directory / "crossroads.lua").exists():
+        set_shortcut(DEFAULT, directory, binds, lambda: None, loaded_check=False)
+        changed = True
+
+    text = hyprland.read_text()
+    if REQUIRE not in text:
+        block = f"\n-- Crossroads shortcut, written by its settings view (Super+Alt+C by default).\n{REQUIRE}\n"
+        write_atomically(hyprland, text + ("" if text.endswith("\n") else "\n") + block)
+        changed = True
+
+    if changed:
+        reload()
+
+
+def _hyprctl_reload() -> None:
+    subprocess.run(["hyprctl", "reload"], capture_output=True, check=True)
 
 
 def hyprctl_binds() -> list[dict]:

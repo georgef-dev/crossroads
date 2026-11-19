@@ -34,7 +34,8 @@ install:
 	rsync -a --delete --exclude tests plugin/ $(PLUGIN_DIR)/
 	omarchy plugin validate $(PLUGIN_DIR)
 	omarchy-shell shell rescanPlugins
-	omarchy plugin enable georgef.crossroads
+	@# A new plugin is only known after a shell restart, so a first install can't enable it yet.
+	@omarchy plugin enable georgef.crossroads || echo "First install: run omarchy restart shell, then omarchy plugin enable georgef.crossroads"
 
 validate:
 	@rm -rf /tmp/crossroads-validate/georgef.crossroads && mkdir -p /tmp/crossroads-validate

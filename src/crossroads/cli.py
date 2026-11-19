@@ -35,6 +35,9 @@ def main(argv: list[str] | None = None) -> int:
     keys.add_argument("action", nargs="?", choices=("show", "set", "reset"), default="show")
     keys.add_argument("combo", nargs="?", help='for set, like "SUPER + ALT + C"')
 
+    setup = commands.add_parser("setup", help="set up a part of Crossroads").add_subparsers(dest="part", required=True)
+    setup.add_parser("shortcut", help="bind Crossroads in Hyprland (Super+Alt+C by default)")
+
     commands.add_parser("fetch", help="print a JSON snapshot for the plugin")
 
     args = parser.parse_args(argv)
@@ -43,6 +46,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "auth":
             return _auth(args)
+        if args.command == "setup":
+            shortcut.setup()
+            print(f"Crossroads opens with {shortcut.show()}.")
+            return 0
         if args.command == "shortcut":
             return _shortcut(args.action, args.combo, parser)
         if args.command == "tag":
