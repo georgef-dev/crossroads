@@ -2,11 +2,11 @@
 
 ## Goals
 
-- Omaview: one place that summarizes everything, starting with a bridge between personal and work life.
+- Crossroads: one place that summarizes everything, starting with a bridge between personal and work life.
 - Bring calendars, email, and later todos into a single view.
 - Surface conflicts early so I can reschedule proactively, e.g. kids pickup overlapping a work meeting.
 - Later, phase 2: flag buffers between nearby events.
-- Later: filters and parameters that control what Omaview shows.
+- Later: filters and parameters that control what Crossroads shows.
 - Next: an omacast-style modal I open from a keybinding, with a quick view of everything and a search bar.
 - After the modal: a settings page.
 - Later: bring in agent statuses and other sources.
@@ -17,7 +17,7 @@
 
 ## Success criteria
 
-- I open Omaview in the morning and see every overlap between personal and work events for the selected range.
+- I open Crossroads in the morning and see every overlap between personal and work events for the selected range.
 - I don't need to open Google Calendar or iCloud to spot those conflicts.
 - The view lives in the Omarchy shell.
 - Conflicts are flagged with simple color coding in the view.
@@ -35,8 +35,8 @@
 - About 5 calendars in total.
 - Email: the you@example.com inbox in v1.
 - v1 runs on Omarchy as an Omarchy shell plugin, with both a bar widget and a panel.
-- Everything stays local. Using the Google and iCloud services is fine, but Omaview itself stays on my machine.
-- Don't publish Omaview to GitHub yet.
+- Everything stays local. Using the Google and iCloud services is fine, but Crossroads itself stays on my machine.
+- Don't publish Crossroads to GitHub yet.
 
 ## Non-goals
 
@@ -51,7 +51,7 @@
 ## Preferences
 
 - Start simple and add features in later phases.
-- The name Omaview can change later.
+- Crossroads: an OS-agnostic name, since a Mac version is a goal. Omarchy ships its own Omaview.
 - Capture the conflict rules in a TLA+ spec.
 
 ## Open questions
