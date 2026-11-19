@@ -46,5 +46,12 @@
   "option.work": "Work",
   "hint.settings": "Settings",
   "hint.change": "Change",
-  "hint.back": "Back"
+  "hint.back": "Back",
+  "setting.shortcut": "Shortcut",
+  "shortcut.change": "Change",
+  "shortcut.reset": "Reset",
+  "shortcut.press": "Press the new shortcut…",
+  "shortcut.saving": "Saving…",
+  "hint.reset": "Reset",
+  "hint.cancel": "Cancel"
 }

@@ -25,6 +25,8 @@ Item {
   // "main" or "settings".
   property string view: "main"
   property int settingsIndex: 0
+  // True while waiting for the new shortcut to be pressed.
+  property bool capturing: false
   // The key before, so vim's gg can be recognized.
   property string previousKey: ""
 
@@ -34,7 +36,7 @@ Item {
   readonly property var todayEvents: Model.eventsInRange(snapshot, now, 0)
   readonly property var todayWindow: Model.dayWindow(todayEvents, now)
   readonly property string keyPreset: service ? Model.keyPreset(service.keys) : "default"
-  readonly property var settingsRows: Model.settingsRows(service ? service.entry : null, service ? service.listing : null)
+  readonly property var settingsRows: Model.settingsRows(service ? service.entry : null, service ? service.listing : null, service ? service.shortcut : "")
   readonly property var status: Model.statusLine(service ? service.refreshing : false, snapshot, service ? service.runFailed : false)
 
   readonly property color background: Commons.Color.menu.background
@@ -56,6 +58,7 @@ Item {
     root.now = new Date()
     root.mode = "insert"
     root.view = "main"
+    root.capturing = false
     root.previousKey = ""
     root.rangeDays = root.service ? root.service.settings.defaultRange : Model.DEFAULT_RANGE
     flick.contentY = 0
@@ -92,6 +95,7 @@ Item {
     names[Qt.Key_Up] = "Up"; names[Qt.Key_Down] = "Down"
     names[Qt.Key_Tab] = "Tab"; names[Qt.Key_Backtab] = "Backtab"
     names[Qt.Key_Return] = "Return"; names[Qt.Key_Enter] = "Return"; names[Qt.Key_Escape] = "Escape"
+    names[Qt.Key_Backspace] = "Backspace"
     var reading = Util.readingKey(event)
     if (reading === Qt.Key_Left) return "Left"
     if (reading === Qt.Key_Right) return "Right"
@@ -137,8 +141,12 @@ Item {
     root.view = "settings"
     root.settingsIndex = 0
     root.previousKey = ""
+    root.capturing = false
     flick.contentY = 0
-    if (root.service) root.service.loadCalendars()
+    if (root.service) {
+      root.service.loadCalendars()
+      root.service.loadShortcut()
+    }
   }
 
   function closeSettings() {
@@ -153,7 +161,36 @@ Item {
     else if (value !== row.value) root.service.setTag(row, value)
   }
 
+  // The key that, with modifiers, makes a shortcut: "A"-"Z", "0"-"9", "F1"-"F12" or "SPACE".
+  function shortcutKeyName(event) {
+    if (event.key >= Qt.Key_A && event.key <= Qt.Key_Z) return String.fromCharCode(event.key)
+    if (event.key >= Qt.Key_0 && event.key <= Qt.Key_9) return String.fromCharCode(event.key)
+    if (event.key >= Qt.Key_F1 && event.key <= Qt.Key_F12) return "F" + (event.key - Qt.Key_F1 + 1)
+    if (event.key === Qt.Key_Space) return "SPACE"
+    return ""
+  }
+
+  // Combinations Hyprland already binds never reach here; the CLI checks again.
+  function captureShortcut(event) {
+    if (event.key === Qt.Key_Escape && event.modifiers === Qt.NoModifier) {
+      root.capturing = false
+      return true
+    }
+    var combo = Model.shortcutFromKey({
+      super: (event.modifiers & Qt.MetaModifier) !== 0,
+      ctrl: (event.modifiers & Qt.ControlModifier) !== 0,
+      alt: (event.modifiers & Qt.AltModifier) !== 0,
+      shift: (event.modifiers & Qt.ShiftModifier) !== 0
+    }, root.shortcutKeyName(event))
+    if (combo) {
+      root.capturing = false
+      if (root.service) root.service.setShortcut(combo)
+    }
+    return true
+  }
+
   function handleSettingsKey(event) {
+    if (root.capturing) return root.captureShortcut(event)
     var control = (event.modifiers & Qt.ControlModifier) !== 0
     var action = Model.settingsKeyAction(root.keyName(event), control, root.keyPreset, root.previousKey)
     var row = root.settingsRows[root.settingsIndex]
@@ -162,6 +199,9 @@ Item {
     else if (action === "last") root.settingsIndex = Math.max(0, root.settingsRows.length - 1)
     else if (action === "up") root.settingsIndex = Math.max(0, root.settingsIndex - 1)
     else if (action === "down") root.settingsIndex = Math.min(root.settingsRows.length - 1, root.settingsIndex + 1)
+    else if (row && row.kind === "shortcut" && action === "next") root.capturing = true
+    else if (row && row.kind === "shortcut" && action === "reset") { if (root.service) root.service.setShortcut("reset") }
+    else if (row && row.kind === "shortcut") {}
     else if (action === "next" && row) root.changeRow(row, Model.cycle(row.options, row.value, 1))
     else if (action === "previous" && row) root.changeRow(row, Model.cycle(row.options, row.value, -1))
     else if (action === "back") root.closeSettings()
@@ -537,6 +577,17 @@ Item {
             selectedIndex: root.settingsIndex
             saving: root.service ? root.service.tagging : false
             saveError: root.service ? root.service.tagError : ""
+            capturing: root.capturing
+            shortcutSaving: root.service ? root.service.shortcutSaving : false
+            shortcutError: root.service ? root.service.shortcutError : ""
+            onChangeShortcut: function(row) {
+              root.settingsIndex = row.index
+              root.capturing = true
+            }
+            onResetShortcut: function(row) {
+              root.settingsIndex = row.index
+              if (root.service) root.service.setShortcut("reset")
+            }
             strings: strings
             foreground: root.foreground
             selectedBackground: root.selectedBackground
@@ -801,11 +852,21 @@ Item {
             }
 
             Row {
-              visible: root.view === "settings"
+              readonly property var row: root.settingsRows[root.settingsIndex]
+              readonly property bool onShortcut: row !== undefined && row.kind === "shortcut"
+              visible: root.view === "settings" && !root.capturing
               spacing: Style.space(14)
               KeyHint { label: strings.t("hint.move"); keys: root.keyPreset === "vim" ? "j k" : "↑ ↓" }
-              KeyHint { label: strings.t("hint.change"); keys: root.keyPreset === "vim" ? "h l ↵" : "← → ↵" }
+              KeyHint { label: strings.t("hint.change"); keys: parent.onShortcut ? "↵" : (root.keyPreset === "vim" ? "h l ↵" : "← → ↵") }
+              KeyHint { visible: parent.onShortcut; label: strings.t("hint.reset"); keys: "⌫" }
               KeyHint { label: strings.t("hint.back"); keys: "Esc" }
+            }
+
+            Row {
+              visible: root.view === "settings" && root.capturing
+              spacing: Style.space(14)
+              Label { text: strings.t("shortcut.press"); color: Commons.Color.accent; font.bold: true; font.pixelSize: Style.font.bodySmall }
+              KeyHint { label: strings.t("hint.cancel"); keys: "Esc" }
             }
 
             Label {

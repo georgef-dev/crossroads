@@ -54,13 +54,14 @@ const listing = [
     calendars: [{ id: "/1/home/", name: "George", tag: "personal" }] }
 ]
 
-test("settings rows: the three general settings, then every calendar", () => {
-  const rows = Model.settingsRows({ refreshMinutes: 30, keys: "vim" }, listing)
+test("settings rows: the general settings, the shortcut, then every calendar", () => {
+  const rows = Model.settingsRows({ refreshMinutes: 30, keys: "vim" }, listing, "SUPER + ALT + X")
 
   assert.deepEqual(rows.map((r) => [r.kind, r.key || r.id, r.value]), [
     ["setting", "refreshMinutes", 30],
     ["setting", "keys", "vim"],
     ["setting", "defaultRange", 7],
+    ["shortcut", "shortcut", "SUPER + ALT + X"],
     ["calendar", "gf@x.com", "personal"],
     ["calendar", "holidays", "off"],
     ["calendar", "/1/home/", "personal"]
@@ -68,13 +69,17 @@ test("settings rows: the three general settings, then every calendar", () => {
   assert.deepEqual(rows[0].options, [0, 15, 30, 60, 120])
   assert.deepEqual(rows[1].options, ["default", "vim"])
   assert.deepEqual(rows[2].options, [0, 1, 3, 7, 14])
-  assert.deepEqual(rows[3].options, ["off", "personal", "work"])
-  assert.deepEqual([rows[5].provider, rows[5].account, rows[5].name], ["icloud", "me@icloud.com", "George"])
-  assert.deepEqual(rows.map((r) => r.index), [0, 1, 2, 3, 4, 5])
+  assert.deepEqual(rows[4].options, ["off", "personal", "work"])
+  assert.deepEqual([rows[6].provider, rows[6].account, rows[6].name], ["icloud", "me@icloud.com", "George"])
+  assert.deepEqual(rows.map((r) => r.index), [0, 1, 2, 3, 4, 5, 6])
 })
 
-test("settings rows: only the general settings while calendars are loading", () => {
-  assert.equal(Model.settingsRows({}, null).length, 3)
+test("settings rows: the shortcut shows the default until it's known", () => {
+  assert.equal(Model.settingsRows({}, null, "").find((r) => r.kind === "shortcut").value, "SUPER + ALT + C")
+})
+
+test("settings rows: only the general settings and the shortcut while calendars are loading", () => {
+  assert.equal(Model.settingsRows({}, null, "SUPER + ALT + C").length, 4)
 })
 
 test("settings keys: arrows in both presets, h/j/k/l only with vim", () => {
@@ -117,17 +122,17 @@ test("found: a calendar can go Off → Personal → Work from the keyboard", () 
   const id = "holidays"
   const seen = []
   for (let press = 0; press < 3; press++) {
-    const row = Model.settingsRows({}, current).find((r) => r.id === id)
+    const row = Model.settingsRows({}, current, "").find((r) => r.id === id)
     const choice = Model.cycle(row.options, row.value, 1)
     current = Model.withTag(current, row, choice)
-    seen.push(Model.settingsRows({}, current).find((r) => r.id === id).value)
+    seen.push(Model.settingsRows({}, current, "").find((r) => r.id === id).value)
   }
   assert.deepEqual(seen, ["personal", "work", "off"])
 })
 
 test("withTag changes only that calendar, and leaves the listing it was given alone", () => {
   const before = JSON.parse(JSON.stringify(listing))
-  const row = Model.settingsRows({}, listing).find((r) => r.id === "/1/home/")
+  const row = Model.settingsRows({}, listing, "").find((r) => r.id === "/1/home/")
 
   const after = Model.withTag(listing, row, "work")
 
@@ -143,4 +148,30 @@ test("found: gg and G jump to the first and last setting with vim keys", () => {
   assert.equal(Model.settingsKeyAction("G", false, "vim", ""), "last")
   assert.equal(Model.settingsKeyAction("G", false, "default", ""), "ignore")
   assert.equal(Model.settingsKeyAction("g", false, "default", "g"), "ignore")
+})
+
+test("Backspace resets a row: the shortcut goes back to its default", () => {
+  assert.equal(Model.settingsKeyAction("Backspace", false, "default", ""), "reset")
+  assert.equal(Model.settingsKeyAction("Backspace", false, "vim", ""), "reset")
+})
+
+test("a new shortcut is a modifier plus a letter, digit, F1–F12 or Space", () => {
+  const mods = (names) => ({ super: names.includes("super"), ctrl: names.includes("ctrl"), alt: names.includes("alt"), shift: names.includes("shift") })
+
+  assert.equal(Model.shortcutFromKey(mods(["super", "alt"]), "X"), "SUPER + ALT + X")
+  assert.equal(Model.shortcutFromKey(mods(["ctrl", "alt", "shift", "super"]), "F12"), "SUPER + CTRL + ALT + SHIFT + F12")
+  assert.equal(Model.shortcutFromKey(mods(["super"]), "SPACE"), "SUPER + SPACE")
+  assert.equal(Model.shortcutFromKey(mods(["ctrl"]), "7"), "CTRL + 7")
+  // Not yet a shortcut: no modifier, only Shift, or the key is itself a modifier or unsupported.
+  assert.equal(Model.shortcutFromKey(mods([]), "X"), "")
+  assert.equal(Model.shortcutFromKey(mods(["shift"]), "X"), "")
+  assert.equal(Model.shortcutFromKey(mods(["super", "alt"]), "Super_L"), "")
+  assert.equal(Model.shortcutFromKey(mods(["super"]), "RETURN"), "")
+  assert.equal(Model.shortcutFromKey(mods(["super"]), "F13"), "")
+})
+
+test("shortcuts read the way people write them", () => {
+  assert.equal(Model.shortcutLabel("SUPER + ALT + C"), "Super+Alt+C")
+  assert.equal(Model.shortcutLabel("CTRL + SHIFT + SPACE"), "Ctrl+Shift+Space")
+  assert.equal(Model.shortcutLabel("SUPER + F5"), "Super+F5")
 })

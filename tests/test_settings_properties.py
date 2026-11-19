@@ -11,7 +11,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from crossroads import config
+from crossroads import config, files
 from crossroads.config import ConfigError, set_tag
 
 ACCOUNT = "me@icloud.com"
@@ -95,7 +95,7 @@ def test_Settings_ConfigIsAlwaysWhole_a_failed_write_keeps_the_old_file(tmp_path
     def crash(*args, **kwargs):
         raise OSError("disk went away")
 
-    monkeypatch.setattr(config.os, failing, crash)
+    monkeypatch.setattr(files.os, failing, crash)
     with pytest.raises(OSError):
         set_tag(path, "icloud", ACCOUNT, "home", "work")
 

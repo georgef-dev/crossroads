@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from crossroads.conflicts import TAGS
+from crossroads.files import write_atomically
 
 PROVIDERS = ("google", "icloud")
 
@@ -82,7 +83,7 @@ def set_tag(path: Path, provider: str, account: str, calendar_id: str, choice: s
         entry["calendars"] = [*calendars, added]
 
     _accounts(data, path)
-    _replace(path, json.dumps(data, indent=2) + "\n")
+    write_atomically(path, json.dumps(data, indent=2) + "\n")
 
 
 def _read(path: Path):
@@ -92,18 +93,6 @@ def _read(path: Path):
         raise ConfigError(f"no config at {path}") from None
     except json.JSONDecodeError as error:
         raise ConfigError(f"{path} is not valid JSON: {error}") from None
-
-
-def _replace(path: Path, text: str) -> None:
-    temp = path.with_name(f".{path.name}.tmp")
-    try:
-        with open(temp, "w") as file:
-            file.write(text)
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(temp, path)
-    finally:
-        temp.unlink(missing_ok=True)
 
 
 def _accounts(data, path: Path) -> list[Account]:

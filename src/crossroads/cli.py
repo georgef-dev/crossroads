@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 
 from crossroads import calendars as calendar_listing
-from crossroads import config, google, icloud, snapshot
+from crossroads import config, google, icloud, shortcut, snapshot
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -31,6 +31,10 @@ def main(argv: list[str] | None = None) -> int:
     tag.add_argument("choice", choices=("personal", "work", "off"))
     tag.add_argument("--name", default="", help="name shown in the view")
 
+    keys = commands.add_parser("shortcut", help="show or change the Hyprland shortcut that opens Crossroads")
+    keys.add_argument("action", nargs="?", choices=("show", "set", "reset"), default="show")
+    keys.add_argument("combo", nargs="?", help='for set, like "SUPER + ALT + C"')
+
     commands.add_parser("fetch", help="print a JSON snapshot for the plugin")
 
     args = parser.parse_args(argv)
@@ -39,6 +43,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "auth":
             return _auth(args)
+        if args.command == "shortcut":
+            return _shortcut(args.action, args.combo, parser)
         if args.command == "tag":
             config.set_tag(config.default_path(), args.provider, args.account, args.calendar, args.choice, args.name)
             return 0
@@ -48,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
         if not (args.provider and args.account):
             parser.error("calendars needs a provider and an account, or --json")
         return _calendars(args.provider, args.account)
-    except (config.ConfigError, google.GoogleError, icloud.ICloudError, OSError) as error:
+    except (config.ConfigError, google.GoogleError, icloud.ICloudError, shortcut.ShortcutError, OSError) as error:
         print(f"crossroads: {error}", file=sys.stderr)
         return 1
 
@@ -73,6 +79,17 @@ def _calendars(provider: str, account: str) -> int:
     else:
         for href, name in icloud.list_calendars(account):
             print(f"{href}  {name}")
+    return 0
+
+
+def _shortcut(action: str, combo: str | None, parser) -> int:
+    if action == "set" and not combo:
+        parser.error('shortcut set needs a combination, like "SUPER + ALT + C"')
+    if action == "set":
+        shortcut.set_shortcut(combo)
+    elif action == "reset":
+        shortcut.set_shortcut(shortcut.DEFAULT)
+    print(shortcut.show())
     return 0
 
 

@@ -247,14 +247,38 @@ function cycle(options, value, step) {
   return options[(index + step + options.length) % options.length]
 }
 
-// What the settings view lists: the general settings, then every calendar
-// the configured accounts can see. `listing` is null while it loads.
-function settingsRows(entry, listing) {
+// ---- Shortcut (specs/Settings.tla). Written like Hyprland: "SUPER + ALT + C".
+
+var DEFAULT_SHORTCUT = "SUPER + ALT + C"
+var SHORTCUT_MODIFIERS = ["SUPER", "CTRL", "ALT", "SHIFT"]
+
+// The shortcut a key press makes, or "" while it isn't one yet. `keyName` is
+// "A"-"Z", "0"-"9", "F1"-"F12" or "SPACE"; anything else, like a modifier on
+// its own, isn't a shortcut.
+function shortcutFromKey(modifiers, keyName) {
+  var key = String(keyName || "")
+  var allowed = /^([A-Z0-9]|F([1-9]|1[0-2])|SPACE)$/.test(key)
+  if (!allowed || !(modifiers.super || modifiers.ctrl || modifiers.alt)) return ""
+  var parts = SHORTCUT_MODIFIERS.filter(function(m) { return modifiers[m.toLowerCase()] })
+  return parts.concat([key]).join(" + ")
+}
+
+// "SUPER + ALT + C" as people write it: "Super+Alt+C".
+function shortcutLabel(combo) {
+  return String(combo || "").split(" + ").map(function(part) {
+    return part.length > 1 && !/^F\d+$/.test(part) ? part.charAt(0) + part.slice(1).toLowerCase() : part
+  }).join("+")
+}
+
+// What the settings view lists: the general settings, the shortcut, then
+// every calendar the configured accounts can see. `listing` is null while it loads.
+function settingsRows(entry, listing, shortcut) {
   var settings = readSettings(entry)
   var rows = [
     { kind: "setting", key: "refreshMinutes", options: REFRESH_OPTIONS, value: settings.refreshMinutes },
     { kind: "setting", key: "keys", options: KEY_PRESETS, value: settings.keys },
-    { kind: "setting", key: "defaultRange", options: RANGES, value: settings.defaultRange }
+    { kind: "setting", key: "defaultRange", options: RANGES, value: settings.defaultRange },
+    { kind: "shortcut", key: "shortcut", options: [], value: shortcut || DEFAULT_SHORTCUT }
   ]
   ;(listing || []).forEach(function(account) {
     account.calendars.forEach(function(calendar) {
@@ -309,7 +333,7 @@ function parseListing(text) {
 // Settings has nothing to type into, so letters only move with the vim preset.
 function settingsKeyAction(key, ctrl, preset, previous) {
   if (ctrl) return key === "," ? "back" : "ignore"
-  var keys = { Up: "up", Down: "down", Left: "previous", Right: "next", Return: "next", Escape: "back" }
+  var keys = { Up: "up", Down: "down", Left: "previous", Right: "next", Return: "next", Escape: "back", Backspace: "reset" }
   if (keys[key]) return keys[key]
   if (keyPreset(preset) !== "vim") return "ignore"
   if (key === "g") return previous === "g" ? "first" : "pending"
@@ -391,6 +415,9 @@ if (typeof module !== "undefined") module.exports = {
   nextRange: nextRange,
   modalSections: modalSections,
   keyPreset: keyPreset,
+  DEFAULT_SHORTCUT: DEFAULT_SHORTCUT,
+  shortcutFromKey: shortcutFromKey,
+  shortcutLabel: shortcutLabel,
   keyAction: keyAction,
   move: move,
   edge: edge,

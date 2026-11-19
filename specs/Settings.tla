@@ -1,16 +1,21 @@
 ------------------------------ MODULE Settings ------------------------------
 \* How Crossroads saves its settings: the widget's shell.json entry, which the
-\* shell replaces whole on every change, and the calendar tags in
-\* config.json, which are rewritten through a temp file and a rename.
+\* shell replaces whole on every change, the calendar tags in config.json,
+\* and the keyboard shortcut in crossroads.lua. Both files are rewritten
+\* through a temp file and a rename.
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS
     Keys,        \* settings in the shell.json entry (refresh, keys, range)
     Values,      \* values a setting can take
     Cals,        \* calendars that can be tagged
+    Combos,      \* key combinations a shortcut can use
+    Default,     \* the default shortcut, Super+Alt+C
     MaxChanges,  \* bound on changes, so every run settles
     NONE,
     CORRUPT      \* a config file cut off partway through a write
+
+ASSUME Default \in Combos
 
 Tags    == {"personal", "work"}
 Choices == Tags \cup {"off"}
@@ -24,9 +29,14 @@ VARIABLES
     temp,          \* the temp file being written, or NONE
     pending,       \* the tag change being written: <<calendar, choice>>, or NONE
     committed,     \* the last tag change that reached config.json, or NONE
+    shortcutFile,  \* crossroads.lua: the set of combinations it binds, or CORRUPT
+    shortcutTemp,  \* the shortcut file being written, or NONE
+    shortcutSaved, \* the last shortcut change that reached crossroads.lua: a combination, or NONE
+    taken,         \* combinations other Hyprland bindings use
     changes        \* changes made so far
 
-vars == <<entry, entryBefore, changedKey, disk, diskBefore, temp, pending, committed, changes>>
+shortcutVars == <<shortcutFile, shortcutTemp, shortcutSaved, taken>>
+vars == <<entry, entryBefore, changedKey, disk, diskBefore, temp, pending, committed, shortcutVars, changes>>
 
 -----------------------------------------------------------------------------
 \* Design.
@@ -49,6 +59,10 @@ Init ==
     /\ temp = NONE
     /\ pending = NONE
     /\ committed = NONE
+    /\ shortcutFile = {Default}
+    /\ shortcutTemp = NONE
+    /\ shortcutSaved = NONE
+    /\ taken \in SUBSET (Combos \ {Default})
     /\ changes = 0
 
 \* The user changes one setting in the settings view.
@@ -58,7 +72,7 @@ ChangeSetting(k, v) ==
     /\ entry' = WithSetting(entry, k, v)
     /\ changedKey' = k
     /\ changes' = changes + 1
-    /\ UNCHANGED <<disk, diskBefore, temp, pending, committed>>
+    /\ UNCHANGED <<disk, diskBefore, temp, pending, committed, shortcutVars>>
 
 \* The user picks a tag; crossroads writes the new config to a temp file.
 StartTag(c, choice) ==
@@ -68,7 +82,7 @@ StartTag(c, choice) ==
     /\ temp' = Retag(disk, c, choice)
     /\ pending' = <<c, choice>>
     /\ changes' = changes + 1
-    /\ UNCHANGED <<entry, entryBefore, changedKey, disk, diskBefore, committed>>
+    /\ UNCHANGED <<entry, entryBefore, changedKey, disk, diskBefore, committed, shortcutVars>>
 
 \* The rename replaces config.json in one step.
 Commit ==
@@ -78,22 +92,72 @@ Commit ==
     /\ committed' = pending
     /\ temp' = NONE
     /\ pending' = NONE
-    /\ UNCHANGED <<entry, entryBefore, changedKey, changes>>
+    /\ UNCHANGED <<entry, entryBefore, changedKey, shortcutVars, changes>>
 
 \* crossroads dies before the rename: the temp file is abandoned.
 Crash ==
     /\ pending # NONE
     /\ temp' = NONE
     /\ pending' = NONE
-    /\ UNCHANGED <<entry, entryBefore, changedKey, disk, diskBefore, committed, changes>>
+    /\ UNCHANGED <<entry, entryBefore, changedKey, disk, diskBefore, committed, shortcutVars, changes>>
 
-Done == changes = MaxChanges /\ pending = NONE
+settingsVars == <<entry, entryBefore, changedKey, disk, diskBefore, temp, pending, committed>>
+
+\* The user picks a new shortcut, or resets to the default. A combination
+\* another binding uses is refused; the shortcut file is written to a temp file.
+StartShortcut(c) ==
+    /\ changes < MaxChanges
+    /\ shortcutTemp = NONE
+    /\ shortcutFile # CORRUPT
+    /\ c \notin taken
+    /\ shortcutTemp' = c
+    /\ changes' = changes + 1
+    /\ UNCHANGED <<settingsVars, shortcutFile, shortcutSaved, taken>>
+
+\* Checked again right before the rename, since another binding may have
+\* taken the combination while it was being written. The model treats the
+\* check and the rename as one step.
+CommitShortcut ==
+    /\ shortcutTemp # NONE
+    /\ shortcutTemp \notin taken
+    /\ shortcutFile' = {shortcutTemp}
+    /\ shortcutSaved' = shortcutTemp
+    /\ shortcutTemp' = NONE
+    /\ UNCHANGED <<settingsVars, taken, changes>>
+
+\* The combination was taken meanwhile: the change is refused and the old file kept.
+RefuseShortcut ==
+    /\ shortcutTemp \in taken
+    /\ shortcutTemp' = NONE
+    /\ UNCHANGED <<settingsVars, shortcutFile, shortcutSaved, taken, changes>>
+
+\* crossroads dies before the rename: the temp file is abandoned.
+CrashShortcut ==
+    /\ shortcutTemp # NONE
+    /\ shortcutTemp' = NONE
+    /\ UNCHANGED <<settingsVars, shortcutFile, shortcutSaved, taken, changes>>
+
+\* The user binds something else elsewhere. Assumption: never the combination
+\* Crossroads holds; that conflict is the user's own edit, outside Crossroads.
+OtherBindingAdded(c) ==
+    /\ changes < MaxChanges
+    /\ shortcutFile # CORRUPT
+    /\ c \notin shortcutFile
+    /\ taken' = taken \cup {c}
+    /\ changes' = changes + 1
+    /\ UNCHANGED <<settingsVars, shortcutFile, shortcutTemp, shortcutSaved>>
+
+Done == changes = MaxChanges /\ pending = NONE /\ shortcutTemp = NONE
 
 Next ==
     \/ \E k \in Keys, v \in Values : ChangeSetting(k, v)
     \/ \E c \in Cals, choice \in Choices : StartTag(c, choice)
     \/ Commit
     \/ Crash
+    \/ \E c \in Combos : StartShortcut(c) \/ OtherBindingAdded(c)
+    \/ CommitShortcut
+    \/ RefuseShortcut
+    \/ CrashShortcut
     \/ (Done /\ UNCHANGED vars)
 
 Spec == Init /\ [][Next]_vars
@@ -126,6 +190,21 @@ TagIsApplied ==
         IN IF choice = "off"
            THEN \A p \in disk : p[1] # c
            ELSE <<c, choice>> \in disk
+
+\* The shortcut never takes a key combination another binding uses.
+ShortcutNeverConflicts ==
+    shortcutFile # CORRUPT => shortcutFile \cap taken = {}
+
+\* There is always exactly one Crossroads shortcut.
+OneShortcut ==
+    shortcutFile # CORRUPT => Cardinality(shortcutFile) = 1
+
+\* A saved shortcut change binds exactly that combination; reset brings back Super+Alt+C.
+ShortcutIsApplied ==
+    shortcutSaved # NONE /\ shortcutFile # CORRUPT => shortcutFile = {shortcutSaved}
+
+\* crossroads.lua is never left cut off: a write that dies keeps the old file.
+ShortcutFileIsAlwaysWhole == shortcutFile # CORRUPT
 
 \* A saved tag change leaves every other calendar as it was.
 OtherCalendarsSurvive ==

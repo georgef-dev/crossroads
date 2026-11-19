@@ -14,6 +14,9 @@ Column {
   property int selectedIndex: 0
   property bool saving: false
   property string saveError: ""
+  property bool capturing: false
+  property bool shortcutSaving: false
+  property string shortcutError: ""
   property var strings: null
   property color foreground: Commons.Color.foreground
   property color dim: Qt.darker(foreground, 1.5)
@@ -23,6 +26,8 @@ Column {
   property string fontFamily: Style.font.menuFamily
 
   signal choose(var row, var value)
+  signal changeShortcut(var row)
+  signal resetShortcut(var row)
   signal rowSelected(var item)
 
   spacing: Style.space(10)
@@ -127,11 +132,95 @@ Column {
     }
   }
 
+  // The shortcut: what it is now, with Change and Reset.
+  component ShortcutRow: Rectangle {
+    id: shortcutRow
+    property var row: null
+    readonly property bool selected: row !== null && row.index === root.selectedIndex
+    width: root.width
+    height: shortcutContent.implicitHeight + Style.space(10)
+    radius: Style.cornerRadius
+    color: selected ? root.selectedBackground : "transparent"
+    onSelectedChanged: if (selected) root.rowSelected(shortcutRow)
+
+    Label {
+      x: Style.space(24)
+      anchors.verticalCenter: parent.verticalCenter
+      text: root.t("setting.shortcut")
+    }
+
+    Row {
+      id: shortcutContent
+      anchors.right: parent.right
+      anchors.rightMargin: Style.space(6)
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: Style.space(4)
+
+      Rectangle {
+        width: comboText.implicitWidth + Style.space(18)
+        height: comboText.implicitHeight + Style.space(8)
+        radius: Style.cornerRadius
+        color: Util.alpha(Commons.Color.accent, root.capturing ? 0.35 : 0.22)
+        border.width: Math.max(1, Style.spacing.hairline)
+        border.color: Commons.Color.accent
+
+        Label {
+          id: comboText
+          anchors.centerIn: parent
+          text: root.capturing ? root.t("shortcut.press")
+            : (root.shortcutSaving ? root.t("shortcut.saving") : Model.shortcutLabel(shortcutRow.row ? shortcutRow.row.value : ""))
+          font.bold: true
+          font.pixelSize: Style.font.bodySmall
+        }
+      }
+
+      Repeater {
+        model: ["change", "reset"]
+
+        Rectangle {
+          required property string modelData
+          width: actionText.implicitWidth + Style.space(18)
+          height: actionText.implicitHeight + Style.space(8)
+          radius: Style.cornerRadius
+          color: Util.alpha(root.foreground, 0.04)
+
+          Label {
+            id: actionText
+            anchors.centerIn: parent
+            text: root.t("shortcut." + modelData)
+            color: root.dim
+            font.pixelSize: Style.font.bodySmall
+          }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: modelData === "change" ? root.changeShortcut(shortcutRow.row) : root.resetShortcut(shortcutRow.row)
+          }
+        }
+      }
+    }
+  }
+
   SectionTitle { text: root.t("settings.general").toUpperCase() }
 
   Repeater {
     model: root.rows.filter(function(row) { return row.kind === "setting" })
     SettingRow { row: modelData }
+  }
+
+  Repeater {
+    model: root.rows.filter(function(row) { return row.kind === "shortcut" })
+    ShortcutRow { row: modelData }
+  }
+
+  Label {
+    visible: root.shortcutError !== ""
+    width: root.width
+    wrapMode: Text.Wrap
+    elide: Text.ElideNone
+    text: root.shortcutError
+    color: Commons.Color.urgent
+    font.pixelSize: Style.font.caption
   }
 
   SectionTitle { text: root.t("settings.calendars").toUpperCase(); topPadding: Style.space(6) }

@@ -5,7 +5,7 @@ import json
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from crossroads import config
+from crossroads import config, files
 from crossroads.config import set_tag
 
 scenarios("settings.feature")
@@ -33,7 +33,7 @@ def the_disk_fails(monkeypatch):
     def crash(*args, **kwargs):
         raise OSError("disk went away")
 
-    monkeypatch.setattr(config.os, "replace", crash)
+    monkeypatch.setattr(files.os, "replace", crash)
 
 
 def tag(path, outcome, calendar, choice, account="me@icloud.com", name=""):

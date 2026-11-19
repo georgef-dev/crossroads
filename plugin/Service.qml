@@ -31,6 +31,11 @@ Item {
   property string tagError: ""
   // Tag changes waiting to be written, oldest first. One write runs at a time.
   property var tagQueue: []
+
+  // The Hyprland shortcut from crossroads.lua; "" until it's read.
+  property string shortcut: ""
+  property string shortcutError: ""
+  readonly property bool shortcutSaving: shortcutProc.running
   readonly property bool tagging: tagProc.running || tagQueue.length > 0
 
   function refresh() {
@@ -59,6 +64,22 @@ Item {
     root.listing = Model.withTag(root.listing, row, choice)
     root.tagQueue = root.tagQueue.concat([[root.crossroadsPath, "tag", row.provider, row.account, row.id, choice, "--name", row.name]])
     root.writeNextTag()
+  }
+
+  function loadShortcut() {
+    root.runShortcut([root.crossroadsPath, "shortcut"])
+  }
+
+  // "reset" brings back the default. The combination goes as its own argument.
+  function setShortcut(combo) {
+    root.shortcutError = ""
+    root.runShortcut(combo === "reset" ? [root.crossroadsPath, "shortcut", "reset"] : [root.crossroadsPath, "shortcut", "set", combo])
+  }
+
+  function runShortcut(command) {
+    if (shortcutProc.running) return
+    shortcutProc.command = command
+    shortcutProc.running = true
   }
 
   function writeNextTag() {
@@ -107,6 +128,22 @@ Item {
       }
       if (root.tagQueue.length > 0) root.writeNextTag()
       else root.refresh()
+    }
+  }
+
+  // Prints the shortcut in force after the command, or an error on stderr.
+  Process {
+    id: shortcutProc
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var saved = String(text || "").trim()
+        if (/^[A-Z0-9 +]{1,40}$/.test(saved)) root.shortcut = saved
+      }
+    }
+    stderr: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.shortcutError = String(text || "").trim().replace(/^crossroads: /, "").slice(0, 200)
     }
   }
 
