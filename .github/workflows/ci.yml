@@ -43,3 +43,12 @@ jobs:
           node-version: "22"
       - run: make test
         working-directory: omarchy
+
+  macos:
+    name: macOS (CrossroadsCore)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: make test
+        working-directory: macos
