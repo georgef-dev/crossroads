@@ -1,0 +1,9 @@
+{
+  "property": "ConflictFlags.FlagsNeedRealOverlap",
+  "name": "One event on two calendars does not conflict with itself",
+  "events": [
+    { "id": "party", "calendar": "family", "tag": "personal", "start": "18:00", "end": "20:00", "allDay": false, "status": "accepted" },
+    { "id": "party", "calendar": "kids", "tag": "personal", "start": "18:00", "end": "20:00", "allDay": false, "status": "accepted" }
+  ],
+  "kinds": { "party@family": "none", "party@kids": "none" }
+}

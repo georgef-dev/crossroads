@@ -1,0 +1,10 @@
+{
+  "property": "ConflictFlags.OneCardPerOverlap",
+  "name": "An event on two calendars gets one card per collision, not one per calendar",
+  "events": [
+    { "id": "party", "calendar": "family", "tag": "personal", "start": "18:00", "end": "20:00", "allDay": false, "status": "accepted" },
+    { "id": "party", "calendar": "kids", "tag": "personal", "start": "18:00", "end": "20:00", "allDay": false, "status": "accepted" },
+    { "id": "busy", "calendar": "work", "tag": "work", "start": "19:00", "end": "21:00", "allDay": false, "status": "accepted" }
+  ],
+  "overlaps": [{ "ids": ["busy", "party"], "start": "19:00", "end": "20:00" }]
+}

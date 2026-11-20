@@ -1,0 +1,9 @@
+{
+  "property": "ConflictFlags.CardWindowIsTheOverlap",
+  "name": "Kids pickup and a work busy block get one card for the time they share",
+  "events": [
+    { "id": "pickup", "calendar": "family", "tag": "personal", "start": "15:00", "end": "15:30", "allDay": false, "status": "accepted" },
+    { "id": "busy", "calendar": "work", "tag": "work", "start": "15:15", "end": "16:00", "allDay": false, "status": "accepted" }
+  ],
+  "overlaps": [{ "ids": ["busy", "pickup"], "start": "15:15", "end": "15:30" }]
+}

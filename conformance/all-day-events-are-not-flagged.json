@@ -1,0 +1,9 @@
+{
+  "property": "ConflictFlags.AllDayNeverFlagged",
+  "name": "All-day events are not flagged",
+  "events": [
+    { "id": "birthday", "calendar": "family", "tag": "personal", "start": "00:00", "end": "23:59", "allDay": true, "status": "accepted" },
+    { "id": "busy", "calendar": "work", "tag": "work", "start": "09:00", "end": "10:00", "allDay": false, "status": "accepted" }
+  ],
+  "kinds": { "birthday@family": "none", "busy@work": "none" }
+}

@@ -1,0 +1,10 @@
+{
+  "property": "ConflictFlags.InactiveNeverFlagged",
+  "name": "Declined events are not flagged, tentative ones are",
+  "events": [
+    { "id": "pickup", "calendar": "family", "tag": "personal", "start": "15:00", "end": "15:30", "allDay": false, "status": "accepted" },
+    { "id": "review", "calendar": "work", "tag": "work", "start": "15:00", "end": "16:00", "allDay": false, "status": "declined" },
+    { "id": "standup", "calendar": "work", "tag": "work", "start": "15:15", "end": "15:45", "allDay": false, "status": "tentative" }
+  ],
+  "kinds": { "pickup@family": "mixed", "review@work": "none", "standup@work": "mixed" }
+}

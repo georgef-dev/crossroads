@@ -1,0 +1,9 @@
+{
+  "property": "ConflictFlags.CrossTagShowsMixed",
+  "name": "Kids pickup overlaps a work busy block",
+  "events": [
+    { "id": "pickup", "calendar": "family", "tag": "personal", "start": "15:00", "end": "15:30", "allDay": false, "status": "accepted" },
+    { "id": "busy", "calendar": "work", "tag": "work", "start": "15:15", "end": "16:00", "allDay": false, "status": "accepted" }
+  ],
+  "kinds": { "pickup@family": "mixed", "busy@work": "mixed" }
+}

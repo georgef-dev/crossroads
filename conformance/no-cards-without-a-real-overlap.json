@@ -1,0 +1,11 @@
+{
+  "property": "ConflictFlags.CardsAreRealOverlaps",
+  "name": "Touching, declined, and all-day events get no cards",
+  "events": [
+    { "id": "busy", "calendar": "work", "tag": "work", "start": "14:00", "end": "15:00", "allDay": false, "status": "accepted" },
+    { "id": "pickup", "calendar": "family", "tag": "personal", "start": "15:00", "end": "15:30", "allDay": false, "status": "accepted" },
+    { "id": "review", "calendar": "work", "tag": "work", "start": "15:00", "end": "16:00", "allDay": false, "status": "declined" },
+    { "id": "birthday", "calendar": "family", "tag": "personal", "start": "00:00", "end": "23:59", "allDay": true, "status": "accepted" }
+  ],
+  "overlaps": []
+}

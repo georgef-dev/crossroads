@@ -1,0 +1,9 @@
+{
+  "property": "ConflictFlags.FlagsNeedRealOverlap",
+  "name": "Events that only touch are not flagged",
+  "events": [
+    { "id": "busy", "calendar": "work", "tag": "work", "start": "14:00", "end": "15:00", "allDay": false, "status": "accepted" },
+    { "id": "pickup", "calendar": "family", "tag": "personal", "start": "15:00", "end": "15:30", "allDay": false, "status": "accepted" }
+  ],
+  "kinds": { "busy@work": "none", "pickup@family": "none" }
+}

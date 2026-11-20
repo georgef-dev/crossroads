@@ -1,0 +1,10 @@
+{
+  "property": "ConflictFlags.MixedNeedsCrossTag",
+  "name": "An event overlapping only its own tag is not mixed",
+  "events": [
+    { "id": "dentist", "calendar": "family", "tag": "personal", "start": "10:00", "end": "11:00", "allDay": false, "status": "accepted" },
+    { "id": "gym", "calendar": "family", "tag": "personal", "start": "10:30", "end": "11:30", "allDay": false, "status": "accepted" },
+    { "id": "busy", "calendar": "work", "tag": "work", "start": "11:00", "end": "12:00", "allDay": false, "status": "accepted" }
+  ],
+  "kinds": { "dentist@family": "same", "gym@family": "mixed", "busy@work": "mixed" }
+}
