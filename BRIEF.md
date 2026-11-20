@@ -10,8 +10,8 @@
 - Next: an omacast-style modal I open from a keybinding, with a quick view of everything and a search bar.
 - After the modal: a settings page.
 - Later: bring in agent statuses and other sources.
-- Later, in no particular order: run on the Debian VM, the MacBook, and a phone view. Each needs its own UI, since a shell plugin only runs on Omarchy.
-- Later: Apple Reminders, possibly through a future native iOS app.
+- Next: a native macOS app, with Apple Reminders as its todo source.
+- Later, in no particular order: the Debian VM and a phone view. Each needs its own UI, since a shell plugin only runs on Omarchy.
 - Later: work email.
 - More phases may come up.
 
@@ -50,6 +50,9 @@
 
 ## Preferences
 
+- macOS: a native Swift app. Calendars and Apple Reminders come through macOS (all my calendars are already in Calendar). Gmail still goes through OAuth, since I use the Gmail app, not Mail.
+- macOS: just me for now, so no signing or notarizing yet. Older macOS versions are fine to support; I run the latest.
+- One repository, with a folder per platform and the shared specs at the root. Platform work happens on a branch that rebases cleanly on main.
 - Start simple and add features in later phases.
 - Crossroads: an OS-agnostic name, since a Mac version is a goal. Omarchy ships its own Omaview.
 - Capture the conflict rules in a TLA+ spec.
