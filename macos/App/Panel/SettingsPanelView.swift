@@ -10,24 +10,28 @@ struct SettingsPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Settings").font(.title3.weight(.semibold))
-                Spacer()
-                Text("Esc back").font(.caption).foregroundStyle(.tertiary)
-            }
-            .padding(16)
+            header
             Divider()
             // The selection moves by key, so the list has to follow it: there
             // are usually more calendars than fit.
             ScrollViewReader { scroller in
                 ScrollView {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 3) {
                         ForEach(model.rows, id: \.index) { row in
                             RowView(row: row, isSelected: row.index == model.settingsSelection)
                                 .id(row.index)
                         }
+                        if model.calendars == nil {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text("Reading your calendars…")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.top, 12)
+                        }
                     }
-                    .padding(12)
+                    .padding(14)
                 }
                 .onChange(of: model.settingsSelection) {
                     withAnimation(.easeOut(duration: 0.12)) {
@@ -37,6 +41,24 @@ struct SettingsPanelView: View {
             }
         }
     }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "slider.horizontal.3")
+                .foregroundStyle(Palette.personal)
+            Text("Settings").font(.title3.weight(.semibold))
+            Spacer()
+            HStack(spacing: 4) {
+                Text("←→").font(.caption2.monospaced())
+                Text("change").font(.caption2)
+                Text("esc").font(.caption2.monospaced())
+                Text("back").font(.caption2)
+            }
+            .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+    }
 }
 
 private struct RowView: View {
@@ -44,26 +66,82 @@ private struct RowView: View {
     let isSelected: Bool
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.caption)
+                .foregroundStyle(symbolColor)
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).lineLimit(1)
                 if let note {
                     Text(note)
                         .font(.caption)
-                        .foregroundStyle(isSelected ? .primary : .secondary)
+                        .foregroundStyle(isSelected ? .secondary : .tertiary)
+                        .lineLimit(1)
                 }
             }
-            Spacer()
-            Text(value)
-                .font(.callout.monospaced())
-                .foregroundStyle(.secondary)
+            Spacer(minLength: 12)
+            value
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isSelected ? Color.accentColor.opacity(0.22) : .clear)
+            RoundedRectangle(cornerRadius: 9)
+                .fill(isSelected ? Palette.personal.opacity(0.16) : Color.primary.opacity(0.03))
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 9)
+                .strokeBorder(isSelected ? Palette.personal.opacity(0.9) : .clear, lineWidth: 1.5)
+        )
+    }
+
+    @ViewBuilder
+    private var value: some View {
+        switch row.kind {
+        case .calendar:
+            // Off, Personal and Work are the whole point of this list, so each
+            // one carries its own color.
+            Chip(text: row.value.capitalized, color: tagColor, filled: row.value != "off")
+        case .shortcut:
+            Text(row.value)
+                .font(.callout.monospaced())
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.08)))
+        default:
+            Text(text)
+                .font(.callout.monospaced())
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var tagColor: Color {
+        switch row.value {
+        case CalendarSetting.personal.rawValue: Palette.personal
+        case CalendarSetting.work.rawValue: Palette.work
+        default: .secondary
+        }
+    }
+
+    private var symbol: String {
+        switch row.kind {
+        case .refreshMinutes: "arrow.clockwise"
+        case .keys: "keyboard"
+        case .defaultRange: "calendar.badge.clock"
+        case .shortcut: "command"
+        case .calendar(let calendar): calendar.kind == .reminders ? "checklist" : "calendar"
+        }
+    }
+
+    private var symbolColor: Color {
+        switch row.kind {
+        case .calendar:
+            row.value == CalendarSetting.off.rawValue
+                ? Color(nsColor: .tertiaryLabelColor)
+                : tagColor
+        default:
+            .secondary
+        }
     }
 
     private var title: String {
@@ -82,11 +160,31 @@ private struct RowView: View {
         return "\(calendar.source) · \(what)"
     }
 
-    private var value: String {
+    private var text: String {
         switch row.kind {
-        case .refreshMinutes: row.value == "0" ? "Manual" : "\(row.value) min"
-        case .defaultRange: row.value == "0" ? "Today" : "+\(row.value)"
+        case .refreshMinutes: row.value == "0" ? "Manual" : "every \(row.value) min"
+        case .defaultRange: row.value == "0" ? "Today" : "+\(row.value) days"
         default: row.value
         }
+    }
+}
+
+private struct Chip: View {
+    let text: String
+    let color: Color
+    let filled: Bool
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(filled ? color : .secondary)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 3)
+            .background(
+                Capsule().fill(filled ? color.opacity(0.18) : Color.primary.opacity(0.06))
+            )
+            .overlay(
+                Capsule().strokeBorder(filled ? color.opacity(0.5) : .clear, lineWidth: 1)
+            )
     }
 }
