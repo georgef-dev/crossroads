@@ -146,9 +146,12 @@ final class EventKitSource {
 
 }
 
-/// Reading one reminder, outside the main actor, so it can run in EventKit's
-/// own completion handler. A reminder on a list that is off is dropped.
-private func reminder(
+/// Reading one reminder. This runs in EventKit's own completion handler, on
+/// whatever queue EventKit chose, so it must say it belongs to no actor: the
+/// app target isolates to the main actor by default, and the runtime traps if
+/// a main-actor function is called from somewhere else.
+/// A reminder on a list that is off is dropped.
+private nonisolated func reminder(
     from reminder: EKReminder,
     settings: Settings,
     calendar: Calendar
