@@ -30,8 +30,11 @@ app: project
 	xcodebuild -project Crossroads.xcodeproj -scheme Crossroads \
 		-configuration Debug -derivedDataPath $(BUILD_DIR) build
 
-# Restart it, so a rebuild replaces the copy that is already running.
+# Restart it, so a rebuild replaces the copy that is already running. Waiting
+# for the old one to go matters: `open` fails with -600 if it is still on its
+# way out.
 .PHONY: run
 run: app
-	@pkill -x Crossroads || true
+	@pkill -x Crossroads 2>/dev/null || true
+	@for _ in $$(seq 25); do pgrep -x Crossroads >/dev/null || break; sleep 0.2; done
 	open $(APP)

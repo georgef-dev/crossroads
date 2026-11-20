@@ -17,13 +17,23 @@ struct SettingsPanelView: View {
             }
             .padding(16)
             Divider()
-            ScrollView {
-                VStack(spacing: 2) {
-                    ForEach(model.rows, id: \.index) { row in
-                        RowView(row: row, isSelected: row.index == model.settingsSelection)
+            // The selection moves by key, so the list has to follow it: there
+            // are usually more calendars than fit.
+            ScrollViewReader { scroller in
+                ScrollView {
+                    VStack(spacing: 2) {
+                        ForEach(model.rows, id: \.index) { row in
+                            RowView(row: row, isSelected: row.index == model.settingsSelection)
+                                .id(row.index)
+                        }
+                    }
+                    .padding(12)
+                }
+                .onChange(of: model.settingsSelection) {
+                    withAnimation(.easeOut(duration: 0.12)) {
+                        scroller.scrollTo(model.settingsSelection, anchor: .center)
                     }
                 }
-                .padding(12)
             }
         }
     }
