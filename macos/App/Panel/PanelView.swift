@@ -1,4 +1,6 @@
-// The panel: the search field, the range picker, the sections, and the footer.
+// The panel: a header with the search field and the range, the sections, and a
+// footer saying how fresh the data is.
+//
 // Every decision about what to show, and what a key does, comes from
 // CrossroadsCore. This file only draws it.
 
@@ -28,13 +30,28 @@ struct PanelView: View {
                 header
                 Divider()
                 list
-                Divider()
                 footer
             }
         }
-        .frame(width: 720, height: 560)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .frame(width: 760, height: 580)
+        .background {
+            // The material follows the system; the wash gives the panel a
+            // little depth without fighting it.
+            Rectangle()
+                .fill(.regularMaterial)
+                .overlay(
+                    LinearGradient(
+                        colors: [Palette.personal.opacity(0.10), Palette.work.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+        )
         .focusable()
         .focusEffectDisabled()
         .focused($focus, equals: .panel)
@@ -53,33 +70,37 @@ struct PanelView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("Search events and mail", text: $model.query)
-                .textFieldStyle(.plain)
-                .font(.title3)
-                .focused($focus, equals: .search)
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search events, reminders and mail", text: $model.query)
+                    .textFieldStyle(.plain)
+                    .font(.title3)
+                    .focused($focus, equals: .search)
+                if model.flagged > 0 {
+                    CountBadge(count: model.flagged)
+                }
+            }
             RangePicker(days: model.days)
         }
-        .padding(16)
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
     }
 
     private var list: some View {
         ScrollViewReader { scroller in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
+                LazyVStack(alignment: .leading, spacing: 20) {
                     ForEach(model.sections, id: \.key) { section in
                         SectionView(section: section, selection: model.selection)
                     }
                     if itemCount(model.sections) == 0 {
-                        Text("Nothing to show")
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 40)
-                            .frame(maxWidth: .infinity)
+                        EmptyState(searching: !model.query.isEmpty)
                     }
                 }
-                .padding(16)
+                .padding(18)
             }
             .onChange(of: model.selection) {
                 withAnimation(.easeOut(duration: 0.12)) {
@@ -90,22 +111,35 @@ struct PanelView: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 7, height: 7)
             Text(freshness)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            if !model.snapshot.errors.isEmpty {
+                Text("· \(model.snapshot.errors.count) problem\(model.snapshot.errors.count == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(Palette.urgent)
+            }
             Spacer()
             if model.settings.keys == .vim {
-                Text(model.mode == .normal ? "NORMAL" : "INSERT")
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
+                ModeBadge(mode: model.mode)
             }
-            Text("⌃, settings")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            Hint("⌃,", "settings")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 11)
+        .background(Color.primary.opacity(0.04))
+    }
+
+    private var statusColor: Color {
+        switch model.status {
+        case .refreshing, .fetching: .secondary
+        case .failed: Palette.urgent
+        case .updated: Palette.ok
+        }
     }
 
     private var freshness: String {
@@ -114,8 +148,8 @@ struct PanelView: View {
         case .fetching: "Fetching…"
         case .updated(let at): "Updated \(at.formatted(date: .omitted, time: .shortened))"
         case .failed(let at):
-            if let at { "Last update failed, showing \(at.formatted(date: .omitted, time: .shortened))" }
-            else { "Last update failed" }
+            if let at { "Update failed · showing \(at.formatted(date: .omitted, time: .shortened))" }
+            else { "Update failed" }
         }
     }
 
@@ -146,28 +180,97 @@ func keyName(_ press: KeyPress) -> String? {
     }
 }
 
+// ---- Small pieces.
+
+private struct CountBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count)")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Palette.urgent))
+            .help("\(count) flagged")
+    }
+}
+
+private struct ModeBadge: View {
+    let mode: Mode
+
+    var body: some View {
+        Text(mode == .normal ? "NORMAL" : "INSERT")
+            .font(.caption2.monospaced().weight(.semibold))
+            .foregroundStyle(mode == .normal ? Palette.work : Palette.personal)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                Capsule().fill((mode == .normal ? Palette.work : Palette.personal).opacity(0.16))
+            )
+    }
+}
+
+private struct Hint: View {
+    let key: String
+    let what: String
+
+    init(_ key: String, _ what: String) {
+        self.key = key
+        self.what = what
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(key)
+                .font(.caption2.monospaced())
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.08)))
+            Text(what).font(.caption2)
+        }
+        .foregroundStyle(.tertiary)
+    }
+}
+
+private struct EmptyState: View {
+    let searching: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: searching ? "magnifyingglass" : "checkmark.circle")
+                .font(.system(size: 28))
+                .foregroundStyle(searching ? Color.secondary : Palette.ok)
+            Text(searching ? "Nothing matches" : "Nothing needs you right now")
+                .foregroundStyle(.secondary)
+        }
+        .padding(.top, 60)
+        .frame(maxWidth: .infinity)
+    }
+}
+
 private struct RangePicker: View {
     let days: Int
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             ForEach(ranges, id: \.self) { range in
                 Text(label(range))
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .font(.caption.weight(range == days ? .semibold : .regular))
+                    .foregroundStyle(range == days ? .white : .secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(range == days ? Color.accentColor.opacity(0.3) : .clear)
+                        Capsule().fill(range == days ? Palette.personal : Color.primary.opacity(0.06))
                     )
-                    .foregroundStyle(range == days ? .primary : .secondary)
             }
+            Spacer()
+            Hint("⇥", "range")
         }
-        .help("Tab and Shift+Tab change the range")
     }
 
     private func label(_ range: Int) -> String {
-        range == 0 ? "Today" : "+\(range)"
+        range == 0 ? "Today" : "+\(range) days"
     }
 }
 
@@ -177,12 +280,20 @@ private struct SectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                Image(systemName: symbol)
+                    .font(.caption)
+                    .foregroundStyle(accent)
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
+                Text("\(section.items.count)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
             if section.columns > 1 {
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible()), count: section.columns),
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: section.columns),
                     spacing: 8
                 ) {
                     ForEach(section.items, id: \.index) { item in
@@ -190,14 +301,17 @@ private struct SectionView: View {
                     }
                 }
             } else {
-                ForEach(section.items, id: \.index) { item in
-                    ItemView(item: item, isSelected: item.index == selection)
+                VStack(spacing: 6) {
+                    ForEach(section.items, id: \.index) { item in
+                        ItemView(item: item, isSelected: item.index == selection)
+                    }
                 }
             }
             if section.items.isEmpty {
                 Text(section.key == .mail ? "No unread mail" : "Nothing today")
                     .font(.callout)
                     .foregroundStyle(.tertiary)
+                    .padding(.leading, 2)
             }
         }
     }
@@ -211,6 +325,24 @@ private struct SectionView: View {
         case .events: "Events"
         }
     }
+
+    private var symbol: String {
+        switch section.key {
+        case .overlaps: "exclamationmark.2"
+        case .reminders: "bell.badge"
+        case .today: "calendar.day.timeline.left"
+        case .mail: "envelope"
+        case .events: "calendar"
+        }
+    }
+
+    private var accent: Color {
+        switch section.key {
+        case .overlaps: Palette.urgent
+        case .reminders: Palette.work
+        default: .secondary
+        }
+    }
 }
 
 private struct ItemView: View {
@@ -218,38 +350,92 @@ private struct ItemView: View {
     let isSelected: Bool
 
     var body: some View {
-        content
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.accentColor.opacity(0.22) : Color.primary.opacity(0.04))
+        HStack(spacing: 0) {
+            // The colored edge is the tag, and the only place a clash shows
+            // both of its colors.
+            RoundedRectangle(cornerRadius: 2)
+                .fill(stripe)
+                .frame(width: 3)
+            content
+                .padding(.horizontal, 11)
+                .padding(.vertical, 9)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 9)
+                .fill(wash)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 9)
+                .strokeBorder(isSelected ? Palette.personal.opacity(0.9) : .clear, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .id(item.index)
+    }
+
+    private var stripe: LinearGradient {
+        switch item.value {
+        case .card(let card):
+            Palette.stripe(tag: card.events[0].event.tag, kind: card.kind)
+        case .event(let flagged):
+            Palette.stripe(tag: flagged.event.tag, kind: flagged.kind)
+        case .reminder(let flagged):
+            Palette.stripe(tag: flagged.reminder.tag, kind: flagged.kind)
+        case .mail(let message):
+            LinearGradient(
+                colors: [Palette.forSender(message.sender)],
+                startPoint: .top,
+                endPoint: .bottom
             )
-            .id(item.index)
+        }
+    }
+
+    /// A flagged row gets a wash of its color; everything else stays quiet, so
+    /// what matters is what stands out.
+    private var wash: Color {
+        let base: Color
+        switch item.value {
+        case .card(let card):
+            base = Palette.wash(tag: card.events[0].event.tag, kind: card.kind)
+        case .event(let flagged):
+            base = flagged.kind == .none
+                ? Color.primary.opacity(0.04)
+                : Palette.wash(tag: flagged.event.tag, kind: flagged.kind)
+        case .reminder(let flagged):
+            base = flagged.kind == .none
+                ? Color.primary.opacity(0.04)
+                : Palette.wash(tag: flagged.reminder.tag, kind: flagged.kind)
+        case .mail:
+            base = Color.primary.opacity(0.04)
+        }
+        return isSelected ? base.opacity(0.9) : base
     }
 
     @ViewBuilder
     private var content: some View {
         switch item.value {
         case .card(let card):
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
-                    Circle()
-                        .fill(Palette.color(tag: card.events[0].event.tag, kind: card.kind))
-                        .frame(width: 8, height: 8)
-                    Text(card.events.map(\.event.title).joined(separator: "  ·  "))
-                        .fontWeight(.medium)
+                    ForEach(Array(card.events.enumerated()), id: \.offset) { index, flagged in
+                        if index > 0 {
+                            Image(systemName: "bolt.horizontal.fill")
+                                .font(.caption2)
+                                .foregroundStyle(Palette.urgent)
+                        }
+                        TagDot(tag: flagged.event.tag)
+                        Text(flagged.event.title).fontWeight(.medium)
+                    }
                 }
                 Text(window(card.start, card.end))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.urgent)
             }
         case .event(let flagged):
             HStack(spacing: 8) {
-                Circle()
-                    .fill(Palette.color(tag: flagged.event.tag, kind: flagged.kind))
-                    .frame(width: 8, height: 8)
+                TagDot(tag: flagged.event.tag)
                 Text(flagged.event.title)
+                    .foregroundStyle(flagged.kind == .none ? .secondary : .primary)
                 Spacer()
                 Text(flagged.event.isAllDay ? "All day" : window(flagged.event.start, flagged.event.end))
                     .font(.caption)
@@ -257,33 +443,78 @@ private struct ItemView: View {
             }
         case .reminder(let flagged):
             HStack(spacing: 8) {
-                Image(systemName: "checkmark.circle")
-                    .foregroundStyle(Palette.color(tag: flagged.reminder.tag, kind: flagged.kind))
+                Image(systemName: "circle")
+                    .font(.caption)
+                    .foregroundStyle(Palette.base(flagged.reminder.tag))
                 Text(flagged.reminder.title)
                 Spacer()
-                Text(due(flagged.reminder))
-                    .font(.caption)
-                    .foregroundStyle(flagged.kind == .none ? .secondary : .primary)
+                DueLabel(reminder: flagged.reminder)
             }
         case .mail(let message):
-            VStack(alignment: .leading, spacing: 2) {
-                Text(message.subject).fontWeight(.medium).lineLimit(1)
-                Text(message.sender).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            HStack(spacing: 9) {
+                Initial(name: message.sender)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(message.subject).fontWeight(.medium).lineLimit(1)
+                    Text(message.sender).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
             }
         }
-    }
-
-    /// Overdue reminders say when they were due; today's say the time.
-    private func due(_ reminder: Reminder) -> String {
-        guard let due = reminder.due else { return "" }
-        if !reminder.hasTime { return "Today" }
-        if due < .now { return "Overdue · \(due.formatted(date: .omitted, time: .shortened))" }
-        return due.formatted(date: .omitted, time: .shortened)
     }
 
     private func window(_ start: Date, _ end: Date) -> String {
         let from = start.formatted(date: .omitted, time: .shortened)
         let to = end.formatted(date: .omitted, time: .shortened)
         return "\(from) – \(to)"
+    }
+}
+
+private struct TagDot: View {
+    let tag: Tag
+
+    var body: some View {
+        Circle()
+            .fill(Palette.base(tag))
+            .frame(width: 6, height: 6)
+            .help(tag == .work ? "Work" : "Personal")
+    }
+}
+
+private struct DueLabel: View {
+    let reminder: Reminder
+
+    var body: some View {
+        if let due = reminder.due {
+            let late = due < .now
+            Text(text(due, late: late))
+                .font(.caption.weight(late ? .semibold : .regular))
+                .foregroundStyle(late ? Palette.urgent : .secondary)
+                .padding(.horizontal, late ? 6 : 0)
+                .padding(.vertical, late ? 2 : 0)
+                .background(
+                    Capsule().fill(late ? Palette.urgent.opacity(0.16) : .clear)
+                )
+        }
+    }
+
+    private func text(_ due: Date, late: Bool) -> String {
+        guard reminder.hasTime else { return late ? "Overdue" : "Today" }
+        let time = due.formatted(date: .omitted, time: .shortened)
+        return late ? "Overdue · \(time)" : time
+    }
+}
+
+private struct Initial: View {
+    let name: String
+
+    var body: some View {
+        Text(letter)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(width: 22, height: 22)
+            .background(Circle().fill(Palette.forSender(name)))
+    }
+
+    private var letter: String {
+        name.first.map { String($0).uppercased() } ?? "?"
     }
 }
