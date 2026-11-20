@@ -11,7 +11,7 @@ import CrossroadsCore
 final class AppModel {
     static let shared = AppModel()
 
-    var snapshot: Snapshot
+    var snapshot = Snapshot()
     var settings: Settings
     var query = ""
     var days: Int
@@ -19,6 +19,11 @@ final class AppModel {
     var mode: Mode
     var showingSettings = false
     var settingsSelection = 0
+    var refreshing = false
+
+    /// Nil until the calendars have been read, which is what the settings view
+    /// shows "loading" for.
+    var calendars: [CalendarInfo]?
 
     /// The key before this one, so gg works.
     private var lastKey = ""
@@ -26,10 +31,12 @@ final class AppModel {
     /// Set by the panel, so a key press can close it.
     var closePanel: () -> Void = {}
 
+    private let source = EventKitSource()
+    private let store = SettingsStore()
+
     private init() {
-        let settings = Settings()
+        let settings = SettingsStore().load()
         self.settings = settings
-        self.snapshot = sampleSnapshot()
         self.days = settings.defaultRange
         self.mode = initialMode(settings.keys)
     }
@@ -39,7 +46,7 @@ final class AppModel {
     }
 
     var rows: [SettingsRow] {
-        settingsRows(settings, calendars: sampleCalendars)
+        settingsRows(settings, calendars: calendars)
     }
 
     /// The number beside the menu bar icon.
@@ -48,7 +55,41 @@ final class AppModel {
     }
 
     var status: StatusLine {
-        statusLine(refreshing: false, snapshot: snapshot, runFailed: false)
+        statusLine(
+            refreshing: refreshing,
+            snapshot: snapshot.fetchedAt == nil ? nil : snapshot,
+            runFailed: !snapshot.errors.isEmpty
+        )
+    }
+
+    /// Reads every source and rebuilds the snapshot. One source failing never
+    /// hides the others: each reports its own error.
+    func refresh() async {
+        refreshing = true
+        defer { refreshing = false }
+
+        let access = await source.requestAccess()
+        var errors: [String] = []
+        if case .denied = access.events { errors.append("Calendar access was refused") }
+        if case .failed(let why) = access.events { errors.append("Calendars: \(why)") }
+        if case .denied = access.reminders { errors.append("Reminders access was refused") }
+        if case .failed(let why) = access.reminders { errors.append("Reminders: \(why)") }
+
+        calendars = source.calendars()
+
+        // The widest range, so changing the range needs no new fetch.
+        let widest = ranges.max() ?? defaultRange
+        let events = source.events(from: .now, days: widest, settings: settings)
+        let reminders = await source.reminders(settings: settings)
+
+        snapshot = buildSnapshot(
+            fetchedAt: .now,
+            events: events,
+            reminders: reminders,
+            calendarNames: source.calendarNames(),
+            errors: errors
+        )
+        selection = min(selection, max(0, itemCount(sections) - 1))
     }
 
     /// Called when the panel opens, so it always opens the way the preset says.
@@ -91,8 +132,7 @@ final class AppModel {
             showingSettings = true
             settingsSelection = 0
         case .refresh:
-            // Refreshing arrives with the real sources, in step 7.
-            snapshot = sampleSnapshot()
+            Task { await refresh() }
         case .clearOrClose:
             if query.isEmpty { closePanel() } else { query = "" }
         case .close:
@@ -121,11 +161,11 @@ final class AppModel {
         case .previous, .next:
             guard let row = rows.first(where: { $0.index == settingsSelection }) else { break }
             settings = settings.cycling(row, by: action == .next ? 1 : -1)
-            applySettings()
+            applySettings(changed: row)
         case .reset:
             guard let row = rows.first(where: { $0.index == settingsSelection }) else { break }
             settings = settings.resetting(row)
-            applySettings()
+            applySettings(changed: row)
         case .jump(let edgeOf):
             settingsSelection = edgeOf == .first ? 0 : max(0, rows.count - 1)
         case .back:
@@ -136,10 +176,17 @@ final class AppModel {
         return true
     }
 
-    /// Settings that change the panel apply at once, not on the next open.
-    private func applySettings() {
+    /// Settings that change the panel apply at once, not on the next open, and
+    /// are kept for the next launch.
+    private func applySettings(changed row: SettingsRow) {
         if !ranges.contains(days) { days = settings.defaultRange }
         mode = initialMode(settings.keys)
+        store.save(settings)
+        // Only switching a calendar on or off changes what there is to read,
+        // so the other settings never set off a fetch.
+        if case .calendar = row.kind {
+            Task { await refresh() }
+        }
     }
 
     private func open(_ item: Item?) {

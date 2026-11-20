@@ -204,7 +204,8 @@ private struct SectionView: View {
 
     private var title: String {
         switch section.key {
-        case .overlaps: "Needs attention"
+        case .overlaps: "Clashes"
+        case .reminders: "Needs attention"
         case .today: "Today"
         case .mail: "Unread"
         case .events: "Events"
@@ -254,12 +255,30 @@ private struct ItemView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        case .reminder(let flagged):
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle")
+                    .foregroundStyle(Palette.color(tag: flagged.reminder.tag, kind: flagged.kind))
+                Text(flagged.reminder.title)
+                Spacer()
+                Text(due(flagged.reminder))
+                    .font(.caption)
+                    .foregroundStyle(flagged.kind == .none ? .secondary : .primary)
+            }
         case .mail(let message):
             VStack(alignment: .leading, spacing: 2) {
                 Text(message.subject).fontWeight(.medium).lineLimit(1)
                 Text(message.sender).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }
+    }
+
+    /// Overdue reminders say when they were due; today's say the time.
+    private func due(_ reminder: Reminder) -> String {
+        guard let due = reminder.due else { return "" }
+        if !reminder.hasTime { return "Today" }
+        if due < .now { return "Overdue · \(due.formatted(date: .omitted, time: .shortened))" }
+        return due.formatted(date: .omitted, time: .shortened)
     }
 
     private func window(_ start: Date, _ end: Date) -> String {

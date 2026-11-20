@@ -14,9 +14,11 @@ test:
 	swift test $(SWIFT_TEST_FLAGS)
 
 # The app project is generated, never hand-edited, so a rebase cannot conflict
-# on it. Regenerated whenever project.yml changes.
-Crossroads.xcodeproj: project.yml
-	xcodegen generate
+# on it. Always regenerated: the file list comes from the App folder, so adding
+# or removing a source has to be picked up too, not just a project.yml change.
+.PHONY: project
+project:
+	@xcodegen generate --quiet
 
 # Build products go next to the project, not into DerivedData, so `make run`
 # and `make install` always know where the app is.
@@ -24,7 +26,7 @@ BUILD_DIR := build
 APP := $(BUILD_DIR)/Build/Products/Debug/Crossroads.app
 
 .PHONY: app
-app: Crossroads.xcodeproj
+app: project
 	xcodebuild -project Crossroads.xcodeproj -scheme Crossroads \
 		-configuration Debug -derivedDataPath $(BUILD_DIR) build
 

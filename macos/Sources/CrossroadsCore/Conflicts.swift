@@ -96,15 +96,17 @@ public func overlaps(_ events: [Event]) -> [Overlap] {
     return result
 }
 
-/// The kind of each event, in the same order as the input.
-public func classify(_ events: [Event]) -> [Kind] {
-    events.map { kind(of: $0, among: events) }
+/// The kind of each event, in the same order as the input. A reminder due
+/// during an event flags it just as another event would.
+public func classify(_ events: [Event], reminders: [Reminder] = []) -> [Kind] {
+    events.map { kind(of: $0, among: events, reminders: reminders) }
 }
 
-private func kind(of event: Event, among events: [Event]) -> Kind {
-    let partners = events.filter { conflict(event, $0) }
-    if partners.contains(where: { $0.tag != event.tag }) { return .mixed }
-    return partners.isEmpty ? .none : .same
+private func kind(of event: Event, among events: [Event], reminders: [Reminder]) -> Kind {
+    let partnerTags = events.filter { conflict(event, $0) }.map(\.tag)
+        + reminders.filter { clash($0, event) }.map(\.tag)
+    if partnerTags.contains(where: { $0 != event.tag }) { return .mixed }
+    return partnerTags.isEmpty ? .none : .same
 }
 
 private func conflict(_ a: Event, _ b: Event) -> Bool {

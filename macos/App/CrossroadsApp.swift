@@ -49,6 +49,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Keep the old shortcut when the new one is already taken, so there is
         // always exactly one (Settings.OneShortcut, ShortcutNeverConflicts).
+        Task { await model.refresh() }
+
         let took = hotkey.register(model.settings.shortcut) { panel.toggle() }
         if !took {
             NSLog("Crossroads: %@ is already taken, so no shortcut is registered", model.settings.shortcut.label)

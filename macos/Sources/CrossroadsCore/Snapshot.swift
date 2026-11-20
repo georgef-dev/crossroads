@@ -27,6 +27,17 @@ public struct FlaggedEvent: Hashable, Sendable {
     }
 }
 
+/// One reminder as the view shows it, with the kind of clash it has.
+public struct FlaggedReminder: Hashable, Sendable {
+    public let reminder: Reminder
+    public let kind: Kind
+
+    public init(reminder: Reminder, kind: Kind) {
+        self.reminder = reminder
+        self.kind = kind
+    }
+}
+
 /// One overlap card: the two events that collide, and the time they share.
 public struct OverlapCard: Hashable, Sendable {
     public let events: [FlaggedEvent]
@@ -72,6 +83,8 @@ public struct Snapshot: Hashable, Sendable {
     public let fetchedAt: Date?
     public let events: [FlaggedEvent]
     public let overlaps: [OverlapCard]
+    /// The reminders that need attention, soonest first.
+    public let reminders: [FlaggedReminder]
     public let mail: [MailMessage]
     /// What went wrong, per source, so one broken source doesn't hide the others.
     public let errors: [String]
@@ -80,12 +93,14 @@ public struct Snapshot: Hashable, Sendable {
         fetchedAt: Date? = nil,
         events: [FlaggedEvent] = [],
         overlaps: [OverlapCard] = [],
+        reminders: [FlaggedReminder] = [],
         mail: [MailMessage] = [],
         errors: [String] = []
     ) {
         self.fetchedAt = fetchedAt
         self.events = Array(events.prefix(maxEvents))
         self.overlaps = Array(overlaps.prefix(maxEvents))
+        self.reminders = Array(reminders.prefix(maxEvents))
         self.mail = Array(mail.prefix(maxMail))
         self.errors = Array(errors.prefix(maxMail))
     }
@@ -97,6 +112,9 @@ public struct Snapshot: Hashable, Sendable {
 public func buildSnapshot(
     fetchedAt: Date? = nil,
     events: [Event],
+    reminders: [Reminder] = [],
+    now: Date = .now,
+    calendar: Calendar = .current,
     calendarNames: [String: String] = [:],
     mail: [MailMessage] = [],
     errors: [String] = []
@@ -105,8 +123,12 @@ public func buildSnapshot(
         calendarNames[event.calendar] ?? event.calendar
     }
 
+    // Only the reminders that need attention reach the view, but every one of
+    // them can still flag an event, so the kinds see all of them.
+    let needingAttention = remindersNeedingAttention(reminders, now: now, calendar: calendar)
+
     // Kinds are worked out over every fetched event, before the list is capped.
-    let flagged = zip(events, classify(events))
+    let flagged = zip(events, classify(events, reminders: reminders))
         .map { FlaggedEvent(event: $0, kind: $1, calendarName: name(of: $0)) }
         .sorted { $0.event.start < $1.event.start }
 
@@ -125,10 +147,16 @@ public func buildSnapshot(
             )
         }
 
+    let flaggedReminders = zip(
+        needingAttention,
+        classifyReminders(needingAttention, events: events)
+    ).map { FlaggedReminder(reminder: $0, kind: $1) }
+
     return Snapshot(
         fetchedAt: fetchedAt,
         events: flagged,
         overlaps: cards,
+        reminders: flaggedReminders,
         mail: mail.sorted { $0.received > $1.received },
         errors: errors
     )
