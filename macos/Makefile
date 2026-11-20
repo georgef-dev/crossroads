@@ -12,3 +12,12 @@ endif
 .PHONY: test
 test:
 	swift test $(SWIFT_TEST_FLAGS)
+
+# The app project is generated, never hand-edited, so a rebase cannot conflict
+# on it. Regenerated whenever project.yml changes.
+Crossroads.xcodeproj: project.yml
+	xcodegen generate
+
+.PHONY: app
+app: Crossroads.xcodeproj
+	xcodebuild -project Crossroads.xcodeproj -scheme Crossroads -configuration Debug build
