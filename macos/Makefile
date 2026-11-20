@@ -18,6 +18,18 @@ test:
 Crossroads.xcodeproj: project.yml
 	xcodegen generate
 
+# Build products go next to the project, not into DerivedData, so `make run`
+# and `make install` always know where the app is.
+BUILD_DIR := build
+APP := $(BUILD_DIR)/Build/Products/Debug/Crossroads.app
+
 .PHONY: app
 app: Crossroads.xcodeproj
-	xcodebuild -project Crossroads.xcodeproj -scheme Crossroads -configuration Debug build
+	xcodebuild -project Crossroads.xcodeproj -scheme Crossroads \
+		-configuration Debug -derivedDataPath $(BUILD_DIR) build
+
+# Restart it, so a rebuild replaces the copy that is already running.
+.PHONY: run
+run: app
+	@pkill -x Crossroads || true
+	open $(APP)

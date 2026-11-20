@@ -22,7 +22,8 @@ final class Hotkey {
 
     init() {}
 
-    deinit {
+    // Isolated, because the Carbon handles it gives back are not Sendable.
+    isolated deinit {
         if let handler { RemoveEventHandler(handler) }
         if let reference { UnregisterEventHotKey(reference) }
     }
@@ -35,7 +36,7 @@ final class Hotkey {
 
         installHandlerIfNeeded()
 
-        var identifier = EventHotKeyID(signature: Self.identifier, id: 1)
+        let identifier = EventHotKeyID(signature: Self.identifier, id: 1)
         var newReference: EventHotKeyRef?
         let status = RegisterEventHotKey(
             code,
