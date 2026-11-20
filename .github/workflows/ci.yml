@@ -27,8 +27,8 @@ jobs:
           echo "$TLA2TOOLS_SHA256  $RUNNER_TEMP/tla2tools.jar" | sha256sum --check
       - run: make check TLC="java -XX:+UseParallelGC -cp $RUNNER_TEMP/tla2tools.jar tlc2.TLC"
 
-  tests:
-    name: Tests (Python ${{ matrix.python }})
+  omarchy:
+    name: Omarchy (Python ${{ matrix.python }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -42,3 +42,4 @@ jobs:
         with:
           node-version: "22"
       - run: make test
+        working-directory: omarchy
