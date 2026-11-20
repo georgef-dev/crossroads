@@ -9,6 +9,8 @@ public let mailColumns = 2
 public enum SectionKey: String, Sendable {
     /// Overlap cards in range. Hidden when there are none.
     case overlaps
+    /// Reminders that need attention. Hidden when there are none.
+    case reminders
     /// Today's strip.
     case today
     case mail
@@ -19,6 +21,7 @@ public enum SectionKey: String, Sendable {
 public enum ItemValue: Hashable, Sendable {
     case event(FlaggedEvent)
     case card(OverlapCard)
+    case reminder(FlaggedReminder)
     case mail(MailMessage)
 }
 
@@ -65,6 +68,7 @@ public func panelSections(
                 cardsInRange(snapshot.overlaps, now: now, days: days, calendar: calendar)
                     .map(ItemValue.card)
             ),
+            (.reminders, snapshot.reminders.map(ItemValue.reminder)),
             (
                 .today,
                 eventsInRange(snapshot.events, now: now, days: 0, calendar: calendar)
@@ -72,8 +76,10 @@ public func panelSections(
             ),
             (.mail, snapshot.mail.map(ItemValue.mail)),
         ]
-        // Today and mail keep their place when empty, so the view keeps its shape.
-        found = found.filter { $0.key != .overlaps || !$0.values.isEmpty }
+        // Today and mail keep their place when empty, so the view keeps its
+        // shape. Overlaps and reminders appear only when there are any.
+        let onlyWhenPresent: Set<SectionKey> = [.overlaps, .reminders]
+        found = found.filter { !onlyWhenPresent.contains($0.key) || !$0.values.isEmpty }
     } else {
         found = [
             (
@@ -81,6 +87,12 @@ public func panelSections(
                 snapshot.events
                     .filter { matches(wanted, [$0.event.title, $0.calendarName]) }
                     .map(ItemValue.event)
+            ),
+            (
+                .reminders,
+                snapshot.reminders
+                    .filter { matches(wanted, [$0.reminder.title, $0.reminder.list]) }
+                    .map(ItemValue.reminder)
             ),
             (
                 .mail,
@@ -131,6 +143,7 @@ public func linkOf(_ item: Item?) -> String {
     switch item.value {
     case .card(let card): link = card.events.first?.event.link ?? ""
     case .event(let flagged): link = flagged.event.link
+    case .reminder(let flagged): link = flagged.reminder.link
     case .mail(let message): link = message.link
     }
     return safeLink(link)
