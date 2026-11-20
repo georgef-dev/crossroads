@@ -9,3 +9,4 @@ specs/*_TTrace_*
 macos/Crossroads.xcodeproj/
 macos/App/Resources/Info.plist
 macos/build/
+.DS_Store
