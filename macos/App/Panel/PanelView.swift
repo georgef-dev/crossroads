@@ -8,7 +8,17 @@ import CrossroadsCore
 
 struct PanelView: View {
     @Bindable var model: AppModel
-    @FocusState private var searching: Bool
+
+    /// onKeyPress only fires while the panel holds focus, and the search field
+    /// is the only thing that can take it. Settings has no field, and vim's
+    /// normal mode deliberately leaves it, so the panel itself has to be able
+    /// to hold focus too, or no key would reach the model at all.
+    private enum Target: Hashable {
+        case search
+        case panel
+    }
+
+    @FocusState private var focus: Target?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -25,11 +35,21 @@ struct PanelView: View {
         .frame(width: 720, height: 560)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .focusable()
+        .focusEffectDisabled()
+        .focused($focus, equals: .panel)
         .onKeyPress(phases: .down) { press in
             handled(press) ? .handled : .ignored
         }
-        .onAppear { searching = model.mode == .insert }
-        .onChange(of: model.mode) { searching = model.mode == .insert }
+        .onAppear { takeFocus() }
+        .onChange(of: model.showingSettings) { takeFocus() }
+        .onChange(of: model.mode) { takeFocus() }
+    }
+
+    /// The search field types; everything else moves. Whichever is right for
+    /// the current view, something is always focused.
+    private func takeFocus() {
+        focus = model.showingSettings || model.mode == .normal ? .panel : .search
     }
 
     private var header: some View {
@@ -39,7 +59,7 @@ struct PanelView: View {
             TextField("Search events and mail", text: $model.query)
                 .textFieldStyle(.plain)
                 .font(.title3)
-                .focused($searching)
+                .focused($focus, equals: .search)
             RangePicker(days: model.days)
         }
         .padding(16)
