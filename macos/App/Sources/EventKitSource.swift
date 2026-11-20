@@ -96,15 +96,31 @@ final class EventKitSource {
         )
 
         // EKReminder is not Sendable, so the mapping happens inside the
-        // handler and only our own values cross back.
+        // handler and only our own values cross back. The mapping has to be a
+        // call to a nonisolated function, not a closure written here: a
+        // closure inside this method would inherit the main actor and trap.
         return await withCheckedContinuation { continuation in
             store.fetchReminders(matching: predicate) { found in
-                let mapped = (found ?? []).compactMap {
-                    reminder(from: $0, settings: settings, calendar: calendar)
-                }
-                continuation.resume(returning: mapped)
+                continuation.resume(
+                    returning: Self.read(found ?? [], settings: settings, calendar: calendar)
+                )
             }
         }
+    }
+
+    /// Reads every reminder EventKit found.
+    ///
+    /// This runs in EventKit's completion handler, on whatever queue EventKit
+    /// chose. The app target isolates to the main actor by default, so any
+    /// closure written inside a main-actor method inherits that isolation and
+    /// the runtime traps when it runs elsewhere. Keeping the loop inside a
+    /// nonisolated function is what stops that.
+    private nonisolated static func read(
+        _ found: [EKReminder],
+        settings: Settings,
+        calendar: Calendar
+    ) -> [Reminder] {
+        found.compactMap { reminder(from: $0, settings: settings, calendar: calendar) }
     }
 
     // ---- Reading EventKit's objects.
