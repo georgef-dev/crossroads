@@ -47,13 +47,22 @@ public struct MailMessage: Hashable, Sendable {
     public let subject: String
     public let sender: String
     public let account: String
+    public let received: Date
     public let link: String
 
-    public init(id: String, subject: String, sender: String, account: String, link: String) {
+    public init(
+        id: String,
+        subject: String,
+        sender: String,
+        account: String,
+        received: Date = .distantPast,
+        link: String
+    ) {
         self.id = id
         self.subject = subject
         self.sender = sender
         self.account = account
+        self.received = received
         self.link = link
     }
 }
@@ -80,4 +89,47 @@ public struct Snapshot: Hashable, Sendable {
         self.mail = Array(mail.prefix(maxMail))
         self.errors = Array(errors.prefix(maxMail))
     }
+}
+
+/// The snapshot for what one fetch found: every event with the kind the rules
+/// give it, one card per collision, and the mail newest first.
+/// Ported from omarchy/src/crossroads/snapshot.py.
+public func buildSnapshot(
+    fetchedAt: Date? = nil,
+    events: [Event],
+    calendarNames: [String: String] = [:],
+    mail: [MailMessage] = [],
+    errors: [String] = []
+) -> Snapshot {
+    func name(of event: Event) -> String {
+        calendarNames[event.calendar] ?? event.calendar
+    }
+
+    // Kinds are worked out over every fetched event, before the list is capped.
+    let flagged = zip(events, classify(events))
+        .map { FlaggedEvent(event: $0, kind: $1, calendarName: name(of: $0)) }
+        .sorted { $0.event.start < $1.event.start }
+
+    let cards = overlaps(events)
+        .sorted { $0.start < $1.start }
+        .map { overlap -> OverlapCard in
+            // A card is personal + work when its two events disagree.
+            let kind: Kind = overlap.first.tag == overlap.second.tag ? .same : .mixed
+            return OverlapCard(
+                events: [overlap.first, overlap.second].map {
+                    FlaggedEvent(event: $0, kind: kind, calendarName: name(of: $0))
+                },
+                start: overlap.start,
+                end: overlap.end,
+                kind: kind
+            )
+        }
+
+    return Snapshot(
+        fetchedAt: fetchedAt,
+        events: flagged,
+        overlaps: cards,
+        mail: mail.sorted { $0.received > $1.received },
+        errors: errors
+    )
 }
