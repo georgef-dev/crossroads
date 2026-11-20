@@ -159,15 +159,39 @@ These come from Apple's documented APIs:
 
 | # | Finding |
 | --- | --- |
-| 1. Free/busy calendar | **Open.** Needs the app to build. |
-| 2. Shared `calendarItemExternalIdentifier` | **Open.** Needs the app to build. |
-| 3. Your own response via `attendees` | **Open.** Needs the app to build. |
+| 1. The work calendar | **Answered, and it changes the plan: the work calendar is not on this Mac at all.** EventKit reports 18 calendars and 14 reminder lists, across two personal Google accounts, iCloud, a subscribed calendar and the Birthdays list. There is no work account among them: the work calendar is subscribed on the phone only. Nothing in the app can reach it until macOS Calendar can. See [The work calendar](#the-work-calendar). |
+| 2. Shared `calendarItemExternalIdentifier` | **Open.** Needs two calendars holding the same meeting, which needs the work calendar. The mapping already assumes it and is tested against recorded shapes. |
+| 3. Your own response via `attendees` | **Open.** Needs an event with attendees, which the personal calendars do not have. |
 | 4. `CrossroadsCore` on Linux | **Not checked.** No container runtime was running, and nothing depends on it: the CI job runs on `macos-latest`, as step 2 says. Worth retrying later only to make CI cheaper. |
 | 5. ⌥⌘C | **Free.** No macOS system shortcut uses it (`com.apple.symbolichotkeys` has nothing on keycode 8 with Command+Option). A third-party app could still hold it; `RegisterEventHotKey` refuses in that case, and the app keeps the old shortcut and logs it. |
 
 Items 1 to 3 all need a working build, so they are the first thing to do in step 5.
 
 If any answer contradicts the plan, stop and replan before going further.
+
+## The work calendar
+
+Crossroads exists to show personal and work clashing, so this matters more than
+anything else on the Mac.
+
+[BRIEF.md](../BRIEF.md) says the Mac needs no Google OAuth, because every
+calendar is already in Calendar. That holds for the personal accounts. It does
+not hold for work: that calendar is an iCalendar subscription on the phone, and
+the Mac has never seen it. EventKit can only offer what macOS Calendar syncs,
+so no amount of app code reaches it.
+
+Two ways out, in order of preference:
+
+1. **Subscribe to the same iCalendar address on the Mac.** Calendar, File, New
+   Calendar Subscription, and keep it in iCloud so it stays in step. Costs no
+   code, and the decision in the brief stands. Work events then arrive with
+   whatever detail the subscription carries.
+2. **Give the Mac app its own Google sign-in,** as Omarchy has. This undoes a
+   decision in the brief and is a lot of work, so it is worth it only if the
+   subscription cannot be put on the Mac.
+
+Until one of these happens, every clash the Mac can show is personal against
+personal, and tags are the only thing marking work.
 
 ## Settings on the Mac
 

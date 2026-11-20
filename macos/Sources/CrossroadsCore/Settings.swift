@@ -23,18 +23,28 @@ public enum CalendarSetting: String, Codable, Sendable, CaseIterable {
     }
 }
 
+/// Whether a calendar holds events or reminders. Both are calendars as far as
+/// EventKit is concerned, and they can share a name, so the settings say which.
+public enum CalendarKind: String, Sendable {
+    case events
+    case reminders
+}
+
 /// One calendar the Mac can see.
 public struct CalendarInfo: Hashable, Sendable {
     /// EventKit's `calendarIdentifier`.
     public let id: String
     public let name: String
-    /// The account it comes from, like "iCloud" or a Google address.
+    /// The account it comes from, like "iCloud" or a Google address. Names
+    /// repeat across accounts, so this is what tells two of them apart.
     public let source: String
+    public let kind: CalendarKind
 
-    public init(id: String, name: String, source: String) {
+    public init(id: String, name: String, source: String, kind: CalendarKind = .events) {
         self.id = id
         self.name = name
         self.source = source
+        self.kind = kind
     }
 }
 

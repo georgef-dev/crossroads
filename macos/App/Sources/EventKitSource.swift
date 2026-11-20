@@ -43,14 +43,25 @@ final class EventKitSource {
     /// can offer each one. Reminder lists are calendars too, as far as
     /// EventKit is concerned.
     func calendars() -> [CalendarInfo] {
-        let all = store.calendars(for: .event) + store.calendars(for: .reminder)
-        return all.map {
-            CalendarInfo(
-                id: $0.calendarIdentifier,
-                name: $0.title,
-                source: $0.source?.title ?? ""
-            )
+        let events = store.calendars(for: .event).map { info($0, kind: .events) }
+        let reminders = store.calendars(for: .reminder).map { info($0, kind: .reminders) }
+        // Calendars first, then reminder lists, each grouped by account. Names
+        // repeat across accounts, so an arbitrary order is hard to read.
+        return (events + reminders).sorted {
+            ($0.kind.rawValue, $0.source.lowercased(), $0.name.lowercased())
+                < ($1.kind.rawValue, $1.source.lowercased(), $1.name.lowercased())
         }
+    }
+
+    private func info(_ calendar: EKCalendar, kind: CalendarKind) -> CalendarInfo {
+        CalendarInfo(
+            id: calendar.calendarIdentifier,
+            name: calendar.title,
+            // A calendar with no account of its own still needs something said
+            // about it, or two calendars of the same name look identical.
+            source: calendar.source?.title ?? "No account",
+            kind: kind
+        )
     }
 
     /// The names to show for each calendar, keyed the way events refer to them.
