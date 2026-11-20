@@ -4,6 +4,38 @@ The goal is a native Mac app that does what Crossroads does on Omarchy. A menu b
 
 This plan is the starting point for work on the Mac, on the `macos` branch. It was written on Linux, so every macOS-specific fact is either documented Apple behavior or marked **verify on the Mac**. Check those before building on them.
 
+## Where this stands
+
+Steps 1 to 3 are done and green. Step 4 is written but not compiled.
+
+| Step | State |
+| --- | --- |
+| 1. Conformance cases | Done. Ten JSON cases in [`conformance/`](../conformance), read by both platforms. |
+| 2. `CrossroadsCore`: conflicts | Done. `classify` and `overlaps` ported, ten properties, conformance runner, CI job. |
+| 3. `CrossroadsCore`: view logic | Done. Ranges, sections, keys, settings, shortcut. 73 Swift tests. |
+| 4. App shell | Written, **not compiled**: it needs a full Xcode. See [Toolchain](#toolchain). |
+| 5 to 10 | Not started. All need Xcode. |
+
+Two things went differently from the plan below:
+
+- **Everything is on the `macos` branch,** with one local commit per step, rather than landing the shared files on `main` first. The shared changes are kept in their own commits, so they can still be cherry-picked to `main`.
+- **A snapshot builder was added to the core** ([`Snapshot.swift`](Sources/CrossroadsCore/Snapshot.swift)), ported from `omarchy/src/crossroads/snapshot.py`. Step 4's sample data needed it, and steps 5 to 7 need it too.
+
+## Toolchain
+
+**A full Xcode is required.** This was not in the plan, and Command Line Tools alone is not enough:
+
+- `xcodebuild` does not exist, so the app target cannot be built at all.
+- `XCTest` does not ship with Command Line Tools.
+- `swift-testing` ships, but SwiftPM does not reliably hand the compiler its
+  macro plugin. [`macos/Makefile`](Makefile) passes `-plugin-path` when the
+  plugin is there, which fixes it. Xcode needs none of this, and the flag is
+  harmless with it.
+
+Decided: **macOS 26** is the floor, XcodeGen is required (`brew install xcodegen`),
+and the hotkey is our own Carbon wrapper ([`App/Hotkey.swift`](App/Hotkey.swift))
+with no dependency.
+
 ## Decisions already made
 
 These come from [BRIEF.md](../BRIEF.md):
@@ -123,7 +155,19 @@ These come from Apple's documented APIs:
 4. **Running `CrossroadsCore` tests on Linux** (`swift test` in a Swift container): if that works, CI can also run them on Linux. That's cheaper, and Omarchy contributors could run them.
 5. **⌥⌘C:** is it free on your Mac?
 
-Write down what you find in this section. If any answer contradicts the plan, stop and replan before going further.
+**What has been checked so far:**
+
+| # | Finding |
+| --- | --- |
+| 1. Free/busy calendar | **Open.** Needs the app to build. |
+| 2. Shared `calendarItemExternalIdentifier` | **Open.** Needs the app to build. |
+| 3. Your own response via `attendees` | **Open.** Needs the app to build. |
+| 4. `CrossroadsCore` on Linux | **Not checked.** No container runtime was running, and nothing depends on it: the CI job runs on `macos-latest`, as step 2 says. Worth retrying later only to make CI cheaper. |
+| 5. ⌥⌘C | **Free.** No macOS system shortcut uses it (`com.apple.symbolichotkeys` has nothing on keycode 8 with Command+Option). A third-party app could still hold it; `RegisterEventHotKey` refuses in that case, and the app keeps the old shortcut and logs it. |
+
+Items 1 to 3 all need a working build, so they are the first thing to do in step 5.
+
+If any answer contradicts the plan, stop and replan before going further.
 
 ## Settings on the Mac
 
@@ -186,7 +230,7 @@ Answer these before the step that needs them:
    - Should a reminder with a time take part in conflicts, for example "Call the school at 3:00" against a meeting?
 
    Either answer touches the rules, so it goes through Specify first.
-2. **Lowest macOS (before step 4):** 14 keeps one permission path for EventKit. 13 is possible with a fallback. My suggestion is 14, unless you know you'll want 13.
-3. **Hotkey (before step 4):** a small Carbon wrapper of our own, about 60 lines and no dependency, or the [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) package, which brings a settings recorder too. My suggestion is our own, to stay free of dependencies.
-4. **XcodeGen (before step 4):** OK to require it (`brew install xcodegen`)? The alternative is a checked-in `.xcodeproj`.
+2. ~~**Lowest macOS**~~ **Answered: macOS 26.** One permission path for EventKit, no fallbacks, and every current SwiftUI API.
+3. ~~**Hotkey**~~ **Answered: our own Carbon wrapper,** in [`App/Hotkey.swift`](App/Hotkey.swift). No dependency.
+4. ~~**XcodeGen**~~ **Answered: yes, required.** `brew install xcodegen`. `make app` regenerates the project, so no `.xcodeproj` is in the repository.
 5. **Work calendar on the Mac (step 5):** is your work account on the Mac's Calendar with full details, or only the free/busy share? It changes nothing in the code, but changes what you'll see.
