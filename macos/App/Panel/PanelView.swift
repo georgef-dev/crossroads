@@ -152,7 +152,7 @@ private struct RangePicker: View {
 }
 
 private struct SectionView: View {
-    let section: Section
+    let section: CrossroadsCore.Section
     let selection: Int
 
     var body: some View {

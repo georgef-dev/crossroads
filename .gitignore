@@ -8,3 +8,4 @@ specs/*_TTrace_*
 .build/
 macos/Crossroads.xcodeproj/
 macos/App/Resources/Info.plist
+macos/build/
