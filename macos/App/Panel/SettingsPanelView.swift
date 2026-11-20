@@ -48,7 +48,9 @@ private struct RowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                 if let note {
-                    Text(note).font(.caption).foregroundStyle(.secondary)
+                    Text(note)
+                        .font(.caption)
+                        .foregroundStyle(isSelected ? .primary : .secondary)
                 }
             }
             Spacer()
@@ -75,8 +77,9 @@ private struct RowView: View {
     }
 
     private var note: String? {
-        if case .calendar(let calendar) = row.kind { return calendar.source }
-        return nil
+        guard case .calendar(let calendar) = row.kind else { return nil }
+        let what = calendar.kind == .reminders ? "Reminders" : "Calendar"
+        return "\(calendar.source) · \(what)"
     }
 
     private var value: String {
