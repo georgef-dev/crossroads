@@ -47,3 +47,11 @@ screenshot: app
 	@pkill -x Crossroads 2>/dev/null || true
 	@for _ in $$(seq 25); do pgrep -x Crossroads >/dev/null || break; sleep 0.2; done
 	$(APP)/Contents/MacOS/Crossroads --screenshot ../assets
+
+# Runs the real app on made-up data, with the panel already open, so a
+# screenshot can be taken by hand. Reads no account and saves no setting.
+.PHONY: demo
+demo: app
+	@pkill -x Crossroads 2>/dev/null || true
+	@for _ in $$(seq 25); do pgrep -x Crossroads >/dev/null || break; sleep 0.2; done
+	$(APP)/Contents/MacOS/Crossroads --demo &

@@ -16,6 +16,12 @@ enum Screenshot {
     /// Draws the panel into `directory`.
     @MainActor
     static func write(into directory: URL) throws {
+        // Dark, to match the README's other picture in weight and because the
+        // panel is usually seen over a desktop rather than a white page. The
+        // palette resolves against the app's appearance, so this has to be set
+        // before anything is drawn.
+        NSApp.appearance = NSAppearance(named: .darkAqua)
+
         let model = AppModel.shared
         model.settings = sampleSettings
         let now = sampleNow()
@@ -36,7 +42,11 @@ enum Screenshot {
 
     @MainActor
     private static func render(_ view: some View, to url: URL) throws {
-        let renderer = ImageRenderer(content: view.environment(\.now, sampleNow()))
+        let renderer = ImageRenderer(
+            content: view
+                .environment(\.now, sampleNow())
+                .environment(\.colorScheme, .dark)
+        )
         // Twice the size, so the picture stays sharp when the README scales it.
         renderer.scale = 2
         guard let image = renderer.cgImage,

@@ -56,7 +56,9 @@ final class PanelController {
         panel.hidesOnDeactivate = true
         panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.contentView = NSHostingView(rootView: PanelView(model: model))
+        panel.contentView = NSHostingView(
+            rootView: PanelView(model: model).environment(\.now, model.referenceNow)
+        )
         return panel
     }
 

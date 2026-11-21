@@ -21,6 +21,11 @@ final class AppModel {
     var settingsSelection = 0
     var refreshing = false
 
+    /// Demo mode draws made-up data, reads no account and saves nothing, so a
+    /// screenshot can be taken without showing a real calendar or disturbing
+    /// the real settings.
+    private(set) var isDemo = false
+
     /// Nil until the calendars have been read, which is what the settings view
     /// shows "loading" for.
     var calendars: [CalendarInfo]?
@@ -39,6 +44,23 @@ final class AppModel {
         self.settings = settings
         self.days = settings.defaultRange
         self.mode = initialMode(settings.keys)
+    }
+
+    /// What the view should treat as now. Demo mode pins it to a fixed morning,
+    /// so the day ahead is still ahead whenever the screenshot is taken.
+    var referenceNow: Date {
+        isDemo ? sampleNow() : .now
+    }
+
+    /// Made-up data, in place of every real source.
+    func startDemo() {
+        isDemo = true
+        settings = sampleSettings
+        calendars = sampleCalendars
+        snapshot = sampleSnapshot(now: sampleNow())
+        days = settings.defaultRange
+        mode = initialMode(settings.keys)
+        selection = 0
     }
 
     var sections: [Section] {
@@ -65,6 +87,10 @@ final class AppModel {
     /// Reads every source and rebuilds the snapshot. One source failing never
     /// hides the others: each reports its own error.
     func refresh() async {
+        guard !isDemo else {
+            snapshot = sampleSnapshot(now: sampleNow())
+            return
+        }
         refreshing = true
         defer { refreshing = false }
 
@@ -181,6 +207,8 @@ final class AppModel {
     private func applySettings(changed row: SettingsRow) {
         if !ranges.contains(days) { days = settings.defaultRange }
         mode = initialMode(settings.keys)
+        // Demo mode must not touch the real settings or any account.
+        guard !isDemo else { return }
         store.save(settings)
         // Only switching a calendar on or off changes what there is to read,
         // so the other settings never set off a fetch.
