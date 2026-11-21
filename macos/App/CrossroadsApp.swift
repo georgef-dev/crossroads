@@ -58,12 +58,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let model = AppModel.shared
+
+        // `--demo` runs the real app on made-up data, for taking a screenshot.
+        // It reads no account and saves no setting.
+        let demo = arguments.contains("--demo")
+        if demo { model.startDemo() }
+
         let panel = PanelController(model: model)
         self.panel = panel
 
         // Keep the old shortcut when the new one is already taken, so there is
         // always exactly one (Settings.OneShortcut, ShortcutNeverConflicts).
-        Task { await model.refresh() }
+        if demo {
+            // Opening it here is too early: the app has not finished coming up
+            // and the panel never appears. The next pass of the run loop works.
+            DispatchQueue.main.async { panel.show() }
+        } else {
+            Task { await model.refresh() }
+        }
 
         let took = hotkey.register(model.settings.shortcut) { panel.toggle() }
         if !took {

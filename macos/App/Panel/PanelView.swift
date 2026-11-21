@@ -186,7 +186,7 @@ struct PanelView: View {
 
 /// What the view treats as "now". It is the real clock in the app, and a fixed
 /// time when drawing the screenshot, so the picture is the same every time.
-private struct NowKey: EnvironmentKey {
+struct NowKey: EnvironmentKey {
     static let defaultValue: Date = .now
 }
 
