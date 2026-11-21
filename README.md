@@ -19,8 +19,13 @@ Crossroads brings into focus what needs your attention right now.
 Everything is searchable, and one keypress opens the event or email where it lives.
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="The Crossroads view: overlap cards for the week, today's strip, and the range picker. All data is made up." width="640">
-  <br><sub>Made-up data. Colors follow your Omarchy theme.</sub>
+  <img src="assets/screenshot.png" alt="Crossroads on Omarchy: overlap cards for the week, today's strip, and the range picker. All data is made up." width="640">
+  <br><sub>Omarchy. Made-up data. Colors follow your Omarchy theme.</sub>
+</p>
+
+<p align="center">
+  <img src="assets/screenshot-macos.png" alt="Crossroads on macOS: a clash between kids pickup and a work block, the reminders that need attention, today, and unread mail. All data is made up." width="640">
+  <br><sub>macOS. Made-up data.</sub>
 </p>
 
 ## Status
@@ -28,7 +33,7 @@ Everything is searchable, and one keypress opens the event or email where it liv
 | Platform | State |
 | --- | --- |
 | [Omarchy](omarchy/README.md) | Works today: an icon in the bar and a full view on Super+Alt+C. Reads Google Calendar, Gmail and iCloud Calendar. |
-| macOS | Planned: a native app that reads every calendar and Apple Reminders through macOS, plus Gmail. |
+| macOS | In progress on [`macos`](../../tree/macos): a native app with a menu bar icon and a panel on ⌥⌘C, reading every calendar and Apple Reminders through EventKit. Gmail is not wired up yet. |
 
 - Read-only and local. Crossroads never changes your calendars, reminders or mail, and it only talks to the services you connect.
 - CI checks the specs and runs the tests on every push. There are no releases yet, so install from source.
