@@ -25,7 +25,7 @@ Everything is searchable, and one keypress opens the event or email where it liv
 
 <p align="center">
   <img src="assets/screenshot-macos.png" alt="Crossroads on macOS: a clash between kids pickup and a work block, the reminders that need attention, today, and unread mail. All data is made up." width="640">
-  <br><sub>macOS. Made-up data.</sub>
+  <br><sub>macOS. Made-up data, drawn straight from the app by <code>make screenshot</code>.</sub>
 </p>
 
 ## Status

@@ -10,6 +10,10 @@ import CrossroadsCore
 
 struct PanelView: View {
     @Bindable var model: AppModel
+    /// Offscreen rendering cannot draw a material, a scroll view's contents or
+    /// a text field, so the screenshot asks for still stand-ins instead. The
+    /// rows themselves are the same ones the panel draws.
+    var forScreenshot = false
 
     /// onKeyPress only fires while the panel holds focus, and the search field
     /// is the only thing that can take it. Settings has no field, and vim's
@@ -25,7 +29,7 @@ struct PanelView: View {
     var body: some View {
         VStack(spacing: 0) {
             if model.showingSettings {
-                SettingsPanelView(model: model)
+                SettingsPanelView(model: model, forScreenshot: forScreenshot)
             } else {
                 header
                 Divider()
@@ -38,7 +42,9 @@ struct PanelView: View {
             // The material follows the system; the wash gives the panel a
             // little depth without fighting it.
             Rectangle()
-                .fill(.regularMaterial)
+                .fill(forScreenshot
+                    ? AnyShapeStyle(Color(light: 0xF5F5F7, dark: 0x1F2230))
+                    : AnyShapeStyle(.regularMaterial))
                 .overlay(
                     LinearGradient(
                         colors: [Palette.personal.opacity(0.10), Palette.work.opacity(0.08)],
@@ -74,10 +80,17 @@ struct PanelView: View {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search events, reminders and mail", text: $model.query)
-                    .textFieldStyle(.plain)
-                    .font(.title3)
-                    .focused($focus, equals: .search)
+                if forScreenshot {
+                    Text("Search events, reminders and mail")
+                        .font(.title3)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                } else {
+                    TextField("Search events, reminders and mail", text: $model.query)
+                        .textFieldStyle(.plain)
+                        .font(.title3)
+                        .focused($focus, equals: .search)
+                }
                 if model.flagged > 0 {
                     CountBadge(count: model.flagged)
                 }
@@ -89,22 +102,32 @@ struct PanelView: View {
         .padding(.bottom, 12)
     }
 
+    @ViewBuilder
+    private var sections: some View {
+        ForEach(model.sections, id: \.key) { section in
+            SectionView(section: section, selection: model.selection)
+        }
+        if itemCount(model.sections) == 0 {
+            EmptyState(searching: !model.query.isEmpty)
+        }
+    }
+
+    @ViewBuilder
     private var list: some View {
-        ScrollViewReader { scroller in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 20) {
-                    ForEach(model.sections, id: \.key) { section in
-                        SectionView(section: section, selection: model.selection)
-                    }
-                    if itemCount(model.sections) == 0 {
-                        EmptyState(searching: !model.query.isEmpty)
-                    }
-                }
+        if forScreenshot {
+            VStack(alignment: .leading, spacing: 20) { sections }
                 .padding(18)
-            }
-            .onChange(of: model.selection) {
-                withAnimation(.easeOut(duration: 0.12)) {
-                    scroller.scrollTo(model.selection, anchor: .center)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        } else {
+            ScrollViewReader { scroller in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 20) { sections }
+                        .padding(18)
+                }
+                .onChange(of: model.selection) {
+                    withAnimation(.easeOut(duration: 0.12)) {
+                        scroller.scrollTo(model.selection, anchor: .center)
+                    }
                 }
             }
         }
@@ -158,6 +181,19 @@ struct PanelView: View {
         let ctrl = press.modifiers.contains(.control)
         guard let name = keyName(press) else { return false }
         return model.handle(key: name, ctrl: ctrl)
+    }
+}
+
+/// What the view treats as "now". It is the real clock in the app, and a fixed
+/// time when drawing the screenshot, so the picture is the same every time.
+private struct NowKey: EnvironmentKey {
+    static let defaultValue: Date = .now
+}
+
+extension EnvironmentValues {
+    var now: Date {
+        get { self[NowKey.self] }
+        set { self[NowKey.self] = newValue }
     }
 }
 
@@ -481,19 +517,26 @@ private struct TagDot: View {
 
 private struct DueLabel: View {
     let reminder: Reminder
+    @Environment(\.now) private var now
 
     var body: some View {
         if let due = reminder.due {
-            let late = due < .now
-            Text(text(due, late: late))
-                .font(.caption.weight(late ? .semibold : .regular))
-                .foregroundStyle(late ? Palette.urgent : .secondary)
-                .padding(.horizontal, late ? 6 : 0)
-                .padding(.vertical, late ? 2 : 0)
+            Text(text(due, late: isLate(due)))
+                .font(.caption.weight(isLate(due) ? .semibold : .regular))
+                .foregroundStyle(isLate(due) ? Palette.urgent : .secondary)
+                .padding(.horizontal, isLate(due) ? 6 : 0)
+                .padding(.vertical, isLate(due) ? 2 : 0)
                 .background(
-                    Capsule().fill(late ? Palette.urgent.opacity(0.16) : .clear)
+                    Capsule().fill(isLate(due) ? Palette.urgent.opacity(0.16) : .clear)
                 )
         }
+    }
+
+    /// A reminder with a time is late once that time has gone. One with only a
+    /// date is late only once the day itself has gone, so a task due today is
+    /// not overdue at nine in the morning.
+    private func isLate(_ due: Date) -> Bool {
+        reminder.hasTime ? due < now : due < Calendar.current.startOfDay(for: now)
     }
 
     private func text(_ due: Date, late: Bool) -> String {
