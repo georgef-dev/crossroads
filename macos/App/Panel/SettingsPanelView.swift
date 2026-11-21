@@ -7,36 +7,51 @@ import CrossroadsCore
 
 struct SettingsPanelView: View {
     let model: AppModel
+    /// A scroll view draws nothing offscreen, so the screenshot stacks the rows.
+    var forScreenshot = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            // The selection moves by key, so the list has to follow it: there
-            // are usually more calendars than fit.
-            ScrollViewReader { scroller in
-                ScrollView {
-                    VStack(spacing: 3) {
-                        ForEach(model.rows, id: \.index) { row in
-                            RowView(row: row, isSelected: row.index == model.settingsSelection)
-                                .id(row.index)
-                        }
-                        if model.calendars == nil {
-                            HStack(spacing: 6) {
-                                ProgressView().controlSize(.small)
-                                Text("Reading your calendars…")
-                                    .font(.callout)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.top, 12)
-                        }
-                    }
+            if forScreenshot {
+                VStack(spacing: 3) { rows }
                     .padding(14)
-                }
-                .onChange(of: model.settingsSelection) {
-                    withAnimation(.easeOut(duration: 0.12)) {
-                        scroller.scrollTo(model.settingsSelection, anchor: .center)
-                    }
+                    .frame(maxHeight: .infinity, alignment: .top)
+            } else {
+                scrolling
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var rows: some View {
+        ForEach(model.rows, id: \.index) { row in
+            RowView(row: row, isSelected: row.index == model.settingsSelection)
+                .id(row.index)
+        }
+        if model.calendars == nil {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Reading your calendars…")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 12)
+        }
+    }
+
+    /// The selection moves by key, so the list has to follow it: there are
+    /// usually more calendars than fit.
+    private var scrolling: some View {
+        ScrollViewReader { scroller in
+            ScrollView {
+                VStack(spacing: 3) { rows }
+                    .padding(14)
+            }
+            .onChange(of: model.settingsSelection) {
+                withAnimation(.easeOut(duration: 0.12)) {
+                    scroller.scrollTo(model.settingsSelection, anchor: .center)
                 }
             }
         }
@@ -48,11 +63,15 @@ struct SettingsPanelView: View {
                 .foregroundStyle(Palette.personal)
             Text("Settings").font(.title3.weight(.semibold))
             Spacer()
-            HStack(spacing: 4) {
-                Text("←→").font(.caption2.monospaced())
-                Text("change").font(.caption2)
-                Text("esc").font(.caption2.monospaced())
-                Text("back").font(.caption2)
+            HStack(spacing: 10) {
+                HStack(spacing: 4) {
+                    Text("←→").font(.caption2.monospaced())
+                    Text("change").font(.caption2)
+                }
+                HStack(spacing: 4) {
+                    Text("esc").font(.caption2.monospaced())
+                    Text("back").font(.caption2)
+                }
             }
             .foregroundStyle(.tertiary)
         }

@@ -43,6 +43,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hotkey = Hotkey()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // `--screenshot <dir>` draws the panel with made-up data and stops. It
+        // never touches EventKit, so it needs no permission and shows nobody's
+        // real calendar.
+        let arguments = CommandLine.arguments
+        if let flag = arguments.firstIndex(of: "--screenshot"), flag + 1 < arguments.count {
+            do {
+                try Screenshot.write(into: URL(fileURLWithPath: arguments[flag + 1]))
+                exit(0)
+            } catch {
+                FileHandle.standardError.write("screenshot failed: \(error)\n".data(using: .utf8)!)
+                exit(1)
+            }
+        }
+
         let model = AppModel.shared
         let panel = PanelController(model: model)
         self.panel = panel

@@ -38,3 +38,12 @@ run: app
 	@pkill -x Crossroads 2>/dev/null || true
 	@for _ in $$(seq 25); do pgrep -x Crossroads >/dev/null || break; sleep 0.2; done
 	open $(APP)
+
+# Draws the panel with made-up data straight to a PNG for the README. Renders
+# offscreen, so it needs no screen recording permission and never shows a real
+# calendar.
+.PHONY: screenshot
+screenshot: app
+	@pkill -x Crossroads 2>/dev/null || true
+	@for _ in $$(seq 25); do pgrep -x Crossroads >/dev/null || break; sleep 0.2; done
+	$(APP)/Contents/MacOS/Crossroads --screenshot ../assets
