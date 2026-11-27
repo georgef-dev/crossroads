@@ -55,3 +55,17 @@ demo: app
 	@pkill -x Crossroads 2>/dev/null || true
 	@for _ in $$(seq 25); do pgrep -x Crossroads >/dev/null || break; sleep 0.2; done
 	$(APP)/Contents/MacOS/Crossroads --demo &
+
+# Builds a Release app into /Applications, so it survives a reboot and can be
+# opened at login. Unsigned beyond the ad-hoc signature: this is a local build
+# for one Mac, with no Developer ID.
+.PHONY: install
+install: project
+	xcodebuild -project Crossroads.xcodeproj -scheme Crossroads \
+		-configuration Release -derivedDataPath $(BUILD_DIR) build
+	@pkill -x Crossroads 2>/dev/null || true
+	@for _ in $$(seq 25); do pgrep -x Crossroads >/dev/null || break; sleep 0.2; done
+	rm -rf /Applications/Crossroads.app
+	cp -R $(BUILD_DIR)/Build/Products/Release/Crossroads.app /Applications/
+	open /Applications/Crossroads.app
+	@echo "Installed. Open at login is in the menu bar menu."

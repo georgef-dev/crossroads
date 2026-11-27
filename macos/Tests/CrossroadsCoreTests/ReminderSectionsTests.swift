@@ -102,3 +102,45 @@ struct ReminderSectionsTests {
         }
     }
 }
+
+@Suite("Mail before an account is connected")
+struct MailSectionTests {
+    let snapshot = Snapshot(
+        events: [],
+        mail: [MailMessage(id: "m", subject: "Hello", sender: "Sam", account: "a", link: "")]
+    )
+
+    func keys(mailConnected: Bool, _ snapshot: Snapshot) -> [SectionKey] {
+        panelSections(
+            snapshot,
+            now: now,
+            days: 7,
+            mailConnected: mailConnected,
+            calendar: newYork
+        ).map(\.key)
+    }
+
+    @Test("the unread section is left out until an account is connected")
+    func hiddenUntilConnected() {
+        #expect(keys(mailConnected: false, snapshot) == [.today])
+        #expect(keys(mailConnected: true, snapshot) == [.today, .mail])
+    }
+
+    @Test("a connected account with no unread mail still shows the section")
+    func emptyButConnected() {
+        #expect(keys(mailConnected: true, Snapshot()) == [.today, .mail])
+    }
+
+    @Test("searching finds nothing in mail when no account is connected")
+    func searchingWithoutMail() {
+        let found = panelSections(
+            snapshot,
+            now: now,
+            days: 7,
+            query: "hello",
+            mailConnected: false,
+            calendar: newYork
+        )
+        #expect(found.isEmpty)
+    }
+}

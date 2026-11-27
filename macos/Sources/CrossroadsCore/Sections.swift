@@ -50,11 +50,16 @@ public struct Section: Hashable, Sendable {
 }
 
 /// What the panel lists, in order.
+///
+/// `mailConnected` says whether any mail account is set up. When none is, the
+/// unread section is left out rather than standing permanently empty, because
+/// an empty section reads as "no unread mail" rather than "not connected".
 public func panelSections(
     _ snapshot: Snapshot?,
     now: Date,
     days: Int,
     query: String = "",
+    mailConnected: Bool = true,
     calendar: Calendar = .current
 ) -> [Section] {
     let snapshot = snapshot ?? Snapshot()
@@ -76,8 +81,9 @@ public func panelSections(
             ),
             (.mail, snapshot.mail.map(ItemValue.mail)),
         ]
-        // Today and mail keep their place when empty, so the view keeps its
-        // shape. Overlaps and reminders appear only when there are any.
+        // Today keeps its place when empty, so the view keeps its shape.
+        // Overlaps and reminders appear only when there are any, and mail only
+        // once an account is connected.
         let onlyWhenPresent: Set<SectionKey> = [.overlaps, .reminders]
         found = found.filter { !onlyWhenPresent.contains($0.key) || !$0.values.isEmpty }
     } else {
@@ -103,6 +109,9 @@ public func panelSections(
         ]
         found = found.filter { !$0.values.isEmpty }
     }
+
+    // No account connected means no unread section, searching included.
+    found = found.filter { $0.key != .mail || mailConnected }
 
     var index = 0
     return found.map { section in

@@ -37,7 +37,16 @@ final class AppModel {
     var closePanel: () -> Void = {}
 
     private let source = EventKitSource()
+    private let gmail = GmailSource()
     private let store = SettingsStore()
+    private var timer: Timer?
+
+    /// Set while the settings view is waiting for the next key to become the
+    /// new shortcut.
+    var capturingShortcut = false
+
+    /// Told about a new shortcut, so the app can register it.
+    var shortcutChanged: (Shortcut) -> Bool = { _ in true }
 
     private init() {
         let settings = SettingsStore().load()
@@ -64,7 +73,14 @@ final class AppModel {
     }
 
     var sections: [Section] {
-        panelSections(snapshot, now: .now, days: days, query: query)
+        panelSections(
+            snapshot,
+            now: referenceNow,
+            days: days,
+            query: query,
+            // Demo mode shows mail without anybody being signed in.
+            mailConnected: isDemo || !GoogleAuth.signedInAccounts().isEmpty
+        )
     }
 
     var rows: [SettingsRow] {
@@ -107,15 +123,49 @@ final class AppModel {
         let widest = ranges.max() ?? defaultRange
         let events = source.events(from: .now, days: widest, settings: settings)
         let reminders = await source.reminders(settings: settings)
+        let (mail, mailErrors) = await gmail.unread()
+        errors += mailErrors
 
-        snapshot = buildSnapshot(
-            fetchedAt: .now,
-            events: events,
-            reminders: reminders,
-            calendarNames: source.calendarNames(),
-            errors: errors
-        )
+        // Nothing came back at all, so keep what was already on screen rather
+        // than blanking the panel over a passing failure.
+        let readNothing = events.isEmpty && reminders.isEmpty && mail.isEmpty
+        if readNothing && !errors.isEmpty && snapshot.fetchedAt != nil {
+            snapshot = keepingLastGood(snapshot, failedWith: errors)
+        } else {
+            snapshot = buildSnapshot(
+                fetchedAt: .now,
+                events: events,
+                reminders: reminders,
+                calendarNames: source.calendarNames(),
+                mail: mail,
+                errors: errors
+            )
+        }
         selection = min(selection, max(0, itemCount(sections) - 1))
+        startTimer()
+    }
+
+    /// Fetches again every so often, and once more when the Mac wakes, because
+    /// a timer does not fire while it is asleep.
+    func startTimer() {
+        timer?.invalidate()
+        timer = nil
+        guard !isDemo, settings.refreshMinutes > 0 else { return }
+        let every = TimeInterval(settings.refreshMinutes) * 60
+        timer = Timer.scheduledTimer(withTimeInterval: every, repeats: true) { _ in
+            Task { @MainActor in await AppModel.shared.refreshIfDue() }
+        }
+    }
+
+    /// Refreshes only when the interval has really passed, so waking from
+    /// sleep twice in a minute does not fetch twice.
+    func refreshIfDue() async {
+        guard isRefreshDue(
+            lastFetch: snapshot.fetchedAt,
+            now: .now,
+            everyMinutes: settings.refreshMinutes
+        ) else { return }
+        await refresh()
     }
 
     /// Called when the panel opens, so it always opens the way the preset says.
@@ -177,6 +227,10 @@ final class AppModel {
 
     private func handleSettings(key: String, ctrl: Bool) -> Bool {
         let rows = self.rows
+        if capturingShortcut {
+            capture(key: key, ctrl: ctrl)
+            return true
+        }
         let action = settingsKeyAction(key, ctrl: ctrl, preset: settings.keys, previous: lastKey)
 
         switch action {
@@ -186,6 +240,11 @@ final class AppModel {
             settingsSelection = min(rows.count - 1, settingsSelection + 1)
         case .previous, .next:
             guard let row = rows.first(where: { $0.index == settingsSelection }) else { break }
+            // The shortcut is captured from a key press, not cycled.
+            if case .shortcut = row.kind {
+                capturingShortcut = true
+                break
+            }
             settings = settings.cycling(row, by: action == .next ? 1 : -1)
             applySettings(changed: row)
         case .reset:
@@ -202,6 +261,43 @@ final class AppModel {
         return true
     }
 
+    /// The next key pressed becomes the shortcut, if it can be one and the
+    /// system will give it to us. Escape gives up and keeps the old one.
+    private func capture(key: String, ctrl: Bool) {
+        defer { capturingShortcut = false }
+        guard key != "Escape" else { return }
+        guard let wanted = Shortcut.from(
+            control: ctrl,
+            option: pressedModifiers.contains(.option),
+            shift: pressedModifiers.contains(.shift),
+            command: pressedModifiers.contains(.command),
+            key: key.count == 1 ? key.uppercased() : key
+        ) else { return }
+
+        // Only keep it if the system actually hands it over, so there is never
+        // a moment with no shortcut (Settings.ShortcutNeverConflicts).
+        guard shortcutChanged(wanted) else {
+            shortcutRefused = wanted
+            return
+        }
+        settings.shortcut = wanted
+        shortcutRefused = nil
+        store.save(settings)
+    }
+
+    /// The modifiers held down right now, which the panel keeps up to date.
+    var pressedModifiers: Modifiers = []
+
+    /// A shortcut another app already holds, so the settings can say so.
+    var shortcutRefused: Shortcut?
+
+    struct Modifiers: OptionSet {
+        let rawValue: Int
+        static let option = Modifiers(rawValue: 1 << 0)
+        static let shift = Modifiers(rawValue: 1 << 1)
+        static let command = Modifiers(rawValue: 1 << 2)
+    }
+
     /// Settings that change the panel apply at once, not on the next open, and
     /// are kept for the next launch.
     private func applySettings(changed row: SettingsRow) {
@@ -214,6 +310,12 @@ final class AppModel {
         // so the other settings never set off a fetch.
         if case .calendar = row.kind {
             Task { await refresh() }
+        }
+        if case .refreshMinutes = row.kind {
+            startTimer()
+        }
+        if case .shortcut = row.kind {
+            _ = shortcutChanged(settings.shortcut)
         }
     }
 

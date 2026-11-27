@@ -1,6 +1,7 @@
 // The menu bar icon, and the shortcut that opens the panel.
 
 import AppKit
+import ServiceManagement
 import SwiftUI
 
 import CrossroadsCore
@@ -23,6 +24,17 @@ struct CrossroadsApp: App {
             }
 
             Divider()
+
+            Toggle("Open at login", isOn: Binding(
+                get: { LaunchAtLogin.isOn },
+                set: { LaunchAtLogin.set($0) }
+            ))
+
+            Button(googleTitle) {
+                Task { await signIn() }
+            }
+
+            Divider()
             Button("Quit Crossroads") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         } label: {
@@ -33,6 +45,91 @@ struct CrossroadsApp: App {
                     Text("\(model.flagged)")
                 }
             }
+        }
+    }
+}
+
+extension CrossroadsApp {
+    private var googleTitle: String {
+        let accounts = GoogleAuth.signedInAccounts()
+        if accounts.isEmpty { return "Connect Gmail…" }
+        return "Connect another Gmail account… (\(accounts.count) connected)"
+    }
+
+    /// Asks which account, then runs the consent flow in the browser.
+    private func signIn() async {
+        guard GoogleAuth.hasClient else {
+            await MainActor.run { chooseClientFile() }
+            return
+        }
+        guard let account = await MainActor.run(body: { askForAccount() }) else { return }
+        do {
+            try await GoogleAuth.signIn(account: account)
+            await AppModel.shared.refresh()
+        } catch {
+            await MainActor.run { report(error) }
+        }
+    }
+
+    /// The first time, Crossroads needs the OAuth client you made in Google
+    /// Cloud. See macos/README.md.
+    @MainActor
+    private func chooseClientFile() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose your Google OAuth client"
+        panel.message = "Pick the client_secret….json you downloaded from Google Cloud."
+        panel.allowedContentTypes = [.json]
+        NSApp.activate()
+        guard panel.runModal() == .OK, let file = panel.url else { return }
+        do {
+            try GoogleAuth.saveClient(from: file)
+            Task { await signIn() }
+        } catch {
+            report(error)
+        }
+    }
+
+    @MainActor
+    private func askForAccount() -> String? {
+        let alert = NSAlert()
+        alert.messageText = "Which Google account?"
+        alert.informativeText = "Crossroads reads unread mail from this account. It never reads message bodies."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        field.placeholderString = "you@gmail.com"
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Sign in")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate()
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        let account = field.stringValue.trimmingCharacters(in: .whitespaces)
+        return account.isEmpty ? nil : account
+    }
+
+    @MainActor
+    private func report(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = "Could not connect Gmail"
+        alert.informativeText = error.localizedDescription
+        NSApp.activate()
+        alert.runModal()
+    }
+}
+
+/// Opening at login, through the system rather than a login item of our own.
+enum LaunchAtLogin {
+    static var isOn: Bool {
+        SMAppService.mainApp.status == .enabled
+    }
+
+    static func set(_ on: Bool) {
+        do {
+            if on {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            NSLog("Crossroads: could not change open at login: %@", error.localizedDescription)
         }
     }
 }
@@ -77,9 +174,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { await model.refresh() }
         }
 
+        // Changing the shortcut in settings re-registers it, and says whether
+        // the system gave it to us so the old one can be kept.
+        model.shortcutChanged = { [hotkey, weak panel] shortcut in
+            hotkey.register(shortcut) { panel?.toggle() }
+        }
+
         let took = hotkey.register(model.settings.shortcut) { panel.toggle() }
         if !took {
             NSLog("Crossroads: %@ is already taken, so no shortcut is registered", model.settings.shortcut.label)
+        }
+
+        // A timer does not fire while the Mac is asleep, so the data would be
+        // as old as the nap without this.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in await AppModel.shared.refreshIfDue() }
         }
     }
 }

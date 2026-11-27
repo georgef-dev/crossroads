@@ -179,6 +179,13 @@ struct PanelView: View {
     /// Turns a SwiftUI key press into the name CrossroadsCore expects.
     private func handled(_ press: KeyPress) -> Bool {
         let ctrl = press.modifiers.contains(.control)
+        // Capturing a shortcut needs every modifier, not just Control.
+        var held: AppModel.Modifiers = []
+        if press.modifiers.contains(.option) { held.insert(.option) }
+        if press.modifiers.contains(.shift) { held.insert(.shift) }
+        if press.modifiers.contains(.command) { held.insert(.command) }
+        model.pressedModifiers = held
+
         guard let name = keyName(press) else { return false }
         return model.handle(key: name, ctrl: ctrl)
     }

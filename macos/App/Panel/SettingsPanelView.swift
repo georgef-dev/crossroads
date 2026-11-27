@@ -24,6 +24,11 @@ struct SettingsPanelView: View {
         }
     }
 
+    private func refusedLabel(for row: SettingsRow) -> String? {
+        guard row.kind == .shortcut, let refused = model.shortcutRefused else { return nil }
+        return "\(refused.label) is taken by another app"
+    }
+
     @ViewBuilder
     private var rows: some View {
         ForEach(model.rows, id: \.index) { row in
@@ -83,6 +88,8 @@ struct SettingsPanelView: View {
 private struct RowView: View {
     let row: SettingsRow
     let isSelected: Bool
+    var capturing = false
+    var refused: String?
 
     var body: some View {
         HStack(spacing: 10) {
@@ -92,7 +99,9 @@ private struct RowView: View {
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).lineLimit(1)
-                if let note {
+                if let refused {
+                    Text(refused).font(.caption).foregroundStyle(Palette.urgent).lineLimit(1)
+                } else if let note {
                     Text(note)
                         .font(.caption)
                         .foregroundStyle(isSelected ? .secondary : .tertiary)
@@ -122,7 +131,7 @@ private struct RowView: View {
             // one carries its own color.
             Chip(text: row.value.capitalized, color: tagColor, filled: row.value != "off")
         case .shortcut:
-            Text(row.value)
+            Text(capturing ? "Press keys…" : row.value)
                 .font(.callout.monospaced())
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
