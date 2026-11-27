@@ -6,20 +6,33 @@ This plan is the starting point for work on the Mac, on the `macos` branch. It w
 
 ## Where this stands
 
-Steps 1 to 3 are done and green. Step 4 is written but not compiled.
+Every step in this plan is done. [README.md](README.md) is the place to start now; this file is kept for the reasoning behind the decisions, and for what is still open.
 
 | Step | State |
 | --- | --- |
 | 1. Conformance cases | Done. Ten JSON cases in [`conformance/`](../conformance), read by both platforms. |
-| 2. `CrossroadsCore`: conflicts | Done. `classify` and `overlaps` ported, ten properties, conformance runner, CI job. |
-| 3. `CrossroadsCore`: view logic | Done. Ranges, sections, keys, settings, shortcut. 73 Swift tests. |
-| 4. App shell | Written, **not compiled**: it needs a full Xcode. See [Toolchain](#toolchain). |
-| 5 to 10 | Not started. All need Xcode. |
+| 2. `CrossroadsCore`: conflicts | Done. Ten properties and the conformance runner. |
+| 3. `CrossroadsCore`: view logic | Done. Ranges, sections, keys, settings, shortcut. |
+| 4. App shell | Done. Menu bar mark, floating panel, Carbon hotkey on ⌥⌘C. |
+| 5. Calendars and reminders | Done, through EventKit. Reminders also took a spec change. |
+| 6. Gmail | Done. Loopback OAuth, the token in the Keychain, metadata only. |
+| 7. Refreshing | Done. A timer, a fetch on wake, and the last good data kept. |
+| 8. Settings | Done. `UserDefaults`, calendar tags, and shortcut capture that refuses a taken combination. |
+| 9. For daily use | Done. `make install` and Open at login. |
+| 10. Docs | Done. [README.md](README.md), and the platform table in the root README. |
 
-Two things went differently from the plan below:
+Three things went differently from the plan below:
 
-- **Everything is on the `macos` branch,** with one local commit per step, rather than landing the shared files on `main` first. The shared changes are kept in their own commits, so they can still be cherry-picked to `main`.
-- **A snapshot builder was added to the core** ([`Snapshot.swift`](Sources/CrossroadsCore/Snapshot.swift)), ported from `omarchy/src/crossroads/snapshot.py`. Step 4's sample data needed it, and steps 5 to 7 need it too.
+- **Everything is on the `macos` branch,** with one commit per step, rather than landing the shared files on `main` first. The shared commits are separate, so they can still be cherry-picked, and the conformance cases and the reminders spec already have been.
+- **A snapshot builder and a panel state machine were added to the core.** Neither is in the plan. The first ports `snapshot.py`; the second moves the panel's decisions out of the app, where nothing could test them.
+- **A full Xcode turned out to be required.** See [Toolchain](#toolchain).
+
+## What is still open
+
+- **The work calendar is not on this Mac,** so no real personal-against-work conflict has ever been seen. See [The work calendar](#the-work-calendar). This is the one gap that matters.
+- **The drawing has no tests.** Every bug found by hand so far was in SwiftUI, EventKit isolation or a label, and none of them would have been caught by the tests that exist. The layer underneath is covered.
+- **The menu bar count** counts flagged events, not overdue reminders. Arguably it should count both.
+- Verify items 2 and 3 below need a calendar the Mac does not have yet.
 
 ## Toolchain
 

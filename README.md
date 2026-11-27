@@ -33,7 +33,7 @@ Everything is searchable, and one keypress opens the event or email where it liv
 | Platform | State |
 | --- | --- |
 | [Omarchy](omarchy/README.md) | Works today: an icon in the bar and a full view on Super+Alt+C. Reads Google Calendar, Gmail and iCloud Calendar. |
-| macOS | In progress on [`macos`](../../tree/macos): a native app with a menu bar icon and a panel on ⌥⌘C, reading every calendar and Apple Reminders through EventKit. Gmail is not wired up yet. |
+| [macOS](macos/README.md) | Works today: a menu bar icon and a panel on ⌥⌘C. Reads every calendar and Apple Reminders through macOS, plus Gmail. |
 
 - Read-only and local. Crossroads never changes your calendars, reminders or mail, and it only talks to the services you connect.
 - CI checks the specs and runs the tests on every push. There are no releases yet, so install from source.
@@ -42,15 +42,16 @@ Everything is searchable, and one keypress opens the event or email where it liv
 ## Get started
 
 - **Omarchy:** [install and setup](omarchy/README.md), then [connect your accounts](omarchy/docs/accounts.md).
+- **macOS:** [install and setup](macos/README.md). Calendars and reminders come from macOS itself, so only Gmail needs connecting.
 
 ## How it's built
 
-- Each platform has its own folder and its own app: [`omarchy/`](omarchy) today, `macos/` next. What they share lives at the root.
+- Each platform has its own folder and its own app: [`omarchy/`](omarchy) and [`macos/`](macos). What they share lives at the root.
 - The rules live in [TLA+](https://lamport.azurewebsites.net/tla/tla.html) specs in [`specs/`](specs), and the specs are the source of truth for every platform:
   - **`ConflictFlags`** covers what counts as a conflict and which overlaps get a card.
   - **`Settings`** covers saving settings, calendar tags and the shortcut without ever corrupting a file or stealing another binding.
 
-  The TLC model checker checks both specs. Every property has tests named after it on each platform.
+  The TLC model checker checks both specs. Every property has tests named after it on each platform, and the cases in [`conformance/`](conformance) are read by both platforms' tests, so the two implementations cannot drift apart.
 - From the repository root, `make check` model-checks the specs and `make test` runs every platform's tests. `make check` needs `tlc`, or set `TLC` to a `java -cp tla2tools.jar tlc2.TLC` command.
 
 ## Privacy
