@@ -28,7 +28,7 @@ struct PanelView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if model.showingSettings {
+            if model.state.showingSettings {
                 SettingsPanelView(model: model, forScreenshot: forScreenshot)
             } else {
                 header
@@ -65,14 +65,14 @@ struct PanelView: View {
             handled(press) ? .handled : .ignored
         }
         .onAppear { takeFocus() }
-        .onChange(of: model.showingSettings) { takeFocus() }
-        .onChange(of: model.mode) { takeFocus() }
+        .onChange(of: model.state.showingSettings) { takeFocus() }
+        .onChange(of: model.state.mode) { takeFocus() }
     }
 
     /// The search field types; everything else moves. Whichever is right for
     /// the current view, something is always focused.
     private func takeFocus() {
-        focus = model.showingSettings || model.mode == .normal ? .panel : .search
+        focus = model.state.showingSettings || model.state.mode == .normal ? .panel : .search
     }
 
     private var header: some View {
@@ -86,7 +86,7 @@ struct PanelView: View {
                         .foregroundStyle(.tertiary)
                     Spacer()
                 } else {
-                    TextField("Search events, reminders and mail", text: $model.query)
+                    TextField("Search events, reminders and mail", text: $model.state.query)
                         .textFieldStyle(.plain)
                         .font(.title3)
                         .focused($focus, equals: .search)
@@ -95,7 +95,7 @@ struct PanelView: View {
                     CountBadge(count: model.flagged)
                 }
             }
-            RangePicker(days: model.days)
+            RangePicker(days: model.state.days)
         }
         .padding(.horizontal, 18)
         .padding(.top, 16)
@@ -105,10 +105,10 @@ struct PanelView: View {
     @ViewBuilder
     private var sections: some View {
         ForEach(model.sections, id: \.key) { section in
-            SectionView(section: section, selection: model.selection)
+            SectionView(section: section, selection: model.state.selection)
         }
         if itemCount(model.sections) == 0 {
-            EmptyState(searching: !model.query.isEmpty)
+            EmptyState(searching: !model.state.query.isEmpty)
         }
     }
 
@@ -124,9 +124,9 @@ struct PanelView: View {
                     LazyVStack(alignment: .leading, spacing: 20) { sections }
                         .padding(18)
                 }
-                .onChange(of: model.selection) {
+                .onChange(of: model.state.selection) {
                     withAnimation(.easeOut(duration: 0.12)) {
-                        scroller.scrollTo(model.selection, anchor: .center)
+                        scroller.scrollTo(model.state.selection, anchor: .center)
                     }
                 }
             }
@@ -141,14 +141,14 @@ struct PanelView: View {
             Text(freshness)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            if !model.snapshot.errors.isEmpty {
-                Text("· \(model.snapshot.errors.count) problem\(model.snapshot.errors.count == 1 ? "" : "s")")
+            if !model.state.snapshot.errors.isEmpty {
+                Text("· \(model.state.snapshot.errors.count) problem\(model.state.snapshot.errors.count == 1 ? "" : "s")")
                     .font(.caption)
                     .foregroundStyle(Palette.urgent)
             }
             Spacer()
-            if model.settings.keys == .vim {
-                ModeBadge(mode: model.mode)
+            if model.state.settings.keys == .vim {
+                ModeBadge(mode: model.state.mode)
             }
             Hint("⌃,", "settings")
         }
@@ -180,14 +180,13 @@ struct PanelView: View {
     private func handled(_ press: KeyPress) -> Bool {
         let ctrl = press.modifiers.contains(.control)
         // Capturing a shortcut needs every modifier, not just Control.
-        var held: AppModel.Modifiers = []
+        var held: KeyModifiers = []
         if press.modifiers.contains(.option) { held.insert(.option) }
         if press.modifiers.contains(.shift) { held.insert(.shift) }
         if press.modifiers.contains(.command) { held.insert(.command) }
-        model.pressedModifiers = held
 
         guard let name = keyName(press) else { return false }
-        return model.handle(key: name, ctrl: ctrl)
+        return model.handle(key: name, ctrl: ctrl, modifiers: held)
     }
 }
 

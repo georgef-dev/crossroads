@@ -19,7 +19,7 @@ struct CrossroadsApp: App {
             .keyboardShortcut("o")
 
             Button("Settings") {
-                model.showingSettings = true
+                model.state.showingSettings = true
                 delegate.panel?.show()
             }
 
@@ -176,13 +176,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Changing the shortcut in settings re-registers it, and says whether
         // the system gave it to us so the old one can be kept.
-        model.shortcutChanged = { [hotkey, weak panel] shortcut in
+        model.registerShortcut = { [hotkey, weak panel] shortcut in
             hotkey.register(shortcut) { panel?.toggle() }
         }
 
-        let took = hotkey.register(model.settings.shortcut) { panel.toggle() }
+        let took = hotkey.register(model.state.settings.shortcut) { panel.toggle() }
         if !took {
-            NSLog("Crossroads: %@ is already taken, so no shortcut is registered", model.settings.shortcut.label)
+            NSLog("Crossroads: %@ is already taken, so no shortcut is registered", model.state.settings.shortcut.label)
         }
 
         // A timer does not fire while the Mac is asleep, so the data would be

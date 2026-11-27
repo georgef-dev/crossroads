@@ -25,17 +25,17 @@ struct SettingsPanelView: View {
     }
 
     private func refusedLabel(for row: SettingsRow) -> String? {
-        guard row.kind == .shortcut, let refused = model.shortcutRefused else { return nil }
+        guard row.kind == .shortcut, let refused = model.state.shortcutRefused else { return nil }
         return "\(refused.label) is taken by another app"
     }
 
     @ViewBuilder
     private var rows: some View {
         ForEach(model.rows, id: \.index) { row in
-            RowView(row: row, isSelected: row.index == model.settingsSelection)
+            RowView(row: row, isSelected: row.index == model.state.settingsSelection)
                 .id(row.index)
         }
-        if model.calendars == nil {
+        if model.state.calendars == nil {
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
                 Text("Reading your calendars…")
@@ -54,9 +54,9 @@ struct SettingsPanelView: View {
                 VStack(spacing: 3) { rows }
                     .padding(14)
             }
-            .onChange(of: model.settingsSelection) {
+            .onChange(of: model.state.settingsSelection) {
                 withAnimation(.easeOut(duration: 0.12)) {
-                    scroller.scrollTo(model.settingsSelection, anchor: .center)
+                    scroller.scrollTo(model.state.settingsSelection, anchor: .center)
                 }
             }
         }

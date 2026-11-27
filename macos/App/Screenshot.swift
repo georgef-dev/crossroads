@@ -23,12 +23,7 @@ enum Screenshot {
         NSApp.appearance = NSAppearance(named: .darkAqua)
 
         let model = AppModel.shared
-        model.settings = sampleSettings
-        let now = sampleNow()
-        model.snapshot = sampleSnapshot(now: now)
-        model.calendars = sampleCalendars
-        model.days = model.settings.defaultRange
-        model.selection = 0
+        model.startDemo()
 
         try render(
             PanelView(model: model, forScreenshot: true),

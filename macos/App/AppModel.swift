@@ -1,5 +1,9 @@
-// What the panel shows and what the keys do. All the decisions live in
-// CrossroadsCore; this holds the current state and passes key presses to it.
+// The app's side of the panel: it owns the state, and carries out whatever
+// that state asks for.
+//
+// Every decision lives in CrossroadsCore's PanelState, which is tested without
+// a UI or an account. What is left here is the side effects: reading the
+// sources, saving, opening a link, registering the shortcut.
 
 import AppKit
 import Observation
@@ -11,104 +15,90 @@ import CrossroadsCore
 final class AppModel {
     static let shared = AppModel()
 
-    var snapshot = Snapshot()
-    var settings: Settings
-    var query = ""
-    var days: Int
-    var selection = 0
-    var mode: Mode
-    var showingSettings = false
-    var settingsSelection = 0
-    var refreshing = false
+    var state: PanelState
 
     /// Demo mode draws made-up data, reads no account and saves nothing, so a
     /// screenshot can be taken without showing a real calendar or disturbing
     /// the real settings.
     private(set) var isDemo = false
 
-    /// Nil until the calendars have been read, which is what the settings view
-    /// shows "loading" for.
-    var calendars: [CalendarInfo]?
-
-    /// The key before this one, so gg works.
-    private var lastKey = ""
-
     /// Set by the panel, so a key press can close it.
     var closePanel: () -> Void = {}
+    /// Takes a shortcut from the system, and says whether it was given.
+    var registerShortcut: (Shortcut) -> Bool = { _ in true }
 
     private let source = EventKitSource()
     private let gmail = GmailSource()
     private let store = SettingsStore()
     private var timer: Timer?
 
-    /// Set while the settings view is waiting for the next key to become the
-    /// new shortcut.
-    var capturingShortcut = false
-
-    /// Told about a new shortcut, so the app can register it.
-    var shortcutChanged: (Shortcut) -> Bool = { _ in true }
-
     private init() {
         let settings = SettingsStore().load()
-        self.settings = settings
-        self.days = settings.defaultRange
-        self.mode = initialMode(settings.keys)
+        state = PanelState(settings: settings)
+        state.mailConnected = !GoogleAuth.signedInAccounts().isEmpty
     }
 
     /// What the view should treat as now. Demo mode pins it to a fixed morning,
-    /// so the day ahead is still ahead whenever the screenshot is taken.
+    /// so the day ahead is still ahead whenever a screenshot is taken.
     var referenceNow: Date {
         isDemo ? sampleNow() : .now
     }
 
-    /// Made-up data, in place of every real source.
-    func startDemo() {
-        isDemo = true
-        settings = sampleSettings
-        calendars = sampleCalendars
-        snapshot = sampleSnapshot(now: sampleNow())
-        days = settings.defaultRange
-        mode = initialMode(settings.keys)
-        selection = 0
-    }
-
-    var sections: [Section] {
-        panelSections(
-            snapshot,
-            now: referenceNow,
-            days: days,
-            query: query,
-            // Demo mode shows mail without anybody being signed in.
-            mailConnected: isDemo || !GoogleAuth.signedInAccounts().isEmpty
-        )
-    }
-
-    var rows: [SettingsRow] {
-        settingsRows(settings, calendars: calendars)
-    }
-
-    /// The number beside the menu bar icon.
-    var flagged: Int {
-        flaggedCount(snapshot.events)
-    }
+    var sections: [Section] { state.sections(now: referenceNow) }
+    var rows: [SettingsRow] { state.rows }
+    var flagged: Int { flaggedCount(state.snapshot.events) }
 
     var status: StatusLine {
         statusLine(
-            refreshing: refreshing,
-            snapshot: snapshot.fetchedAt == nil ? nil : snapshot,
-            runFailed: !snapshot.errors.isEmpty
+            refreshing: state.refreshing,
+            snapshot: state.snapshot.fetchedAt == nil ? nil : state.snapshot,
+            runFailed: !state.snapshot.errors.isEmpty
         )
     }
+
+    func panelDidOpen() {
+        state.opened()
+    }
+
+    /// Handles a key press. Returns false when the panel should treat it as
+    /// typing, so the search field gets it instead.
+    func handle(key: String, ctrl: Bool, modifiers: KeyModifiers) -> Bool {
+        let effects = state.handle(key: key, ctrl: ctrl, modifiers: modifiers, now: referenceNow)
+        if effects.contains(.typing) { return false }
+        for effect in effects { carry(out: effect) }
+        return true
+    }
+
+    private func carry(out effect: PanelState.Effect) {
+        switch effect {
+        case .typing:
+            break
+        case .open(let link):
+            if let url = URL(string: link) { NSWorkspace.shared.open(url) }
+        case .close:
+            closePanel()
+        case .refresh:
+            Task { await refresh() }
+        case .saveSettings:
+            guard !isDemo else { break }
+            store.save(state.settings)
+            startTimer()
+        case .registerShortcut(let shortcut):
+            let took = isDemo || registerShortcut(shortcut)
+            for next in state.shortcutRegistered(shortcut, took: took) {
+                carry(out: next)
+            }
+        }
+    }
+
+    // ---- Reading the sources.
 
     /// Reads every source and rebuilds the snapshot. One source failing never
     /// hides the others: each reports its own error.
     func refresh() async {
-        guard !isDemo else {
-            snapshot = sampleSnapshot(now: sampleNow())
-            return
-        }
-        refreshing = true
-        defer { refreshing = false }
+        guard !isDemo else { return }
+        state.refreshing = true
+        defer { state.refreshing = false }
 
         let access = await source.requestAccess()
         var errors: [String] = []
@@ -117,22 +107,23 @@ final class AppModel {
         if case .denied = access.reminders { errors.append("Reminders access was refused") }
         if case .failed(let why) = access.reminders { errors.append("Reminders: \(why)") }
 
-        calendars = source.calendars()
+        state.calendars = source.calendars()
+        state.mailConnected = !GoogleAuth.signedInAccounts().isEmpty
 
         // The widest range, so changing the range needs no new fetch.
         let widest = ranges.max() ?? defaultRange
-        let events = source.events(from: .now, days: widest, settings: settings)
-        let reminders = await source.reminders(settings: settings)
+        let events = source.events(from: .now, days: widest, settings: state.settings)
+        let reminders = await source.reminders(settings: state.settings)
         let (mail, mailErrors) = await gmail.unread()
         errors += mailErrors
 
         // Nothing came back at all, so keep what was already on screen rather
         // than blanking the panel over a passing failure.
         let readNothing = events.isEmpty && reminders.isEmpty && mail.isEmpty
-        if readNothing && !errors.isEmpty && snapshot.fetchedAt != nil {
-            snapshot = keepingLastGood(snapshot, failedWith: errors)
+        if readNothing && !errors.isEmpty && state.snapshot.fetchedAt != nil {
+            state.snapshot = keepingLastGood(state.snapshot, failedWith: errors)
         } else {
-            snapshot = buildSnapshot(
+            state.snapshot = buildSnapshot(
                 fetchedAt: .now,
                 events: events,
                 reminders: reminders,
@@ -141,7 +132,7 @@ final class AppModel {
                 errors: errors
             )
         }
-        selection = min(selection, max(0, itemCount(sections) - 1))
+        state.selection = min(state.selection, max(0, itemCount(sections) - 1))
         startTimer()
     }
 
@@ -150,179 +141,29 @@ final class AppModel {
     func startTimer() {
         timer?.invalidate()
         timer = nil
-        guard !isDemo, settings.refreshMinutes > 0 else { return }
-        let every = TimeInterval(settings.refreshMinutes) * 60
+        guard !isDemo, state.settings.refreshMinutes > 0 else { return }
+        let every = TimeInterval(state.settings.refreshMinutes) * 60
         timer = Timer.scheduledTimer(withTimeInterval: every, repeats: true) { _ in
             Task { @MainActor in await AppModel.shared.refreshIfDue() }
         }
     }
 
-    /// Refreshes only when the interval has really passed, so waking from
-    /// sleep twice in a minute does not fetch twice.
+    /// Refreshes only when the interval has really passed, so waking twice in
+    /// a minute does not fetch twice.
     func refreshIfDue() async {
         guard isRefreshDue(
-            lastFetch: snapshot.fetchedAt,
+            lastFetch: state.snapshot.fetchedAt,
             now: .now,
-            everyMinutes: settings.refreshMinutes
+            everyMinutes: state.settings.refreshMinutes
         ) else { return }
         await refresh()
     }
 
-    /// Called when the panel opens, so it always opens the way the preset says.
-    func panelDidOpen() {
-        mode = initialMode(settings.keys)
-        selection = 0
-        lastKey = ""
-    }
-
-    /// Handles a key press. Returns false when the panel should treat it as
-    /// typing, so the search field gets it instead.
-    func handle(key: String, ctrl: Bool) -> Bool {
-        defer { lastKey = key }
-        if showingSettings {
-            return handleSettings(key: key, ctrl: ctrl)
-        }
-
-        let action = keyAction(
-            key,
-            ctrl: ctrl,
-            preset: settings.keys,
-            mode: mode,
-            previous: lastKey
-        )
-
-        switch action {
-        case .move(let direction):
-            selection = move(sections, from: selection, direction)
-        case .jump(let edgeOf):
-            selection = edge(sections, edgeOf)
-        case .rangeNext:
-            days = nextRange(from: days, step: 1, wrap: true)
-            selection = 0
-        case .rangePrev:
-            days = nextRange(from: days, step: -1, wrap: true)
-            selection = 0
-        case .open:
-            open(itemAt(sections, index: selection))
-        case .settings:
-            showingSettings = true
-            settingsSelection = 0
-        case .refresh:
-            Task { await refresh() }
-        case .clearOrClose:
-            if query.isEmpty { closePanel() } else { query = "" }
-        case .close:
-            closePanel()
-        case .normalMode:
-            mode = .normal
-        case .insertMode:
-            mode = .insert
-        case .pending, .ignore:
-            break
-        case .typing:
-            return false
-        }
-        return true
-    }
-
-    private func handleSettings(key: String, ctrl: Bool) -> Bool {
-        let rows = self.rows
-        if capturingShortcut {
-            capture(key: key, ctrl: ctrl)
-            return true
-        }
-        let action = settingsKeyAction(key, ctrl: ctrl, preset: settings.keys, previous: lastKey)
-
-        switch action {
-        case .up:
-            settingsSelection = max(0, settingsSelection - 1)
-        case .down:
-            settingsSelection = min(rows.count - 1, settingsSelection + 1)
-        case .previous, .next:
-            guard let row = rows.first(where: { $0.index == settingsSelection }) else { break }
-            // The shortcut is captured from a key press, not cycled.
-            if case .shortcut = row.kind {
-                capturingShortcut = true
-                break
-            }
-            settings = settings.cycling(row, by: action == .next ? 1 : -1)
-            applySettings(changed: row)
-        case .reset:
-            guard let row = rows.first(where: { $0.index == settingsSelection }) else { break }
-            settings = settings.resetting(row)
-            applySettings(changed: row)
-        case .jump(let edgeOf):
-            settingsSelection = edgeOf == .first ? 0 : max(0, rows.count - 1)
-        case .back:
-            showingSettings = false
-        case .pending, .ignore:
-            break
-        }
-        return true
-    }
-
-    /// The next key pressed becomes the shortcut, if it can be one and the
-    /// system will give it to us. Escape gives up and keeps the old one.
-    private func capture(key: String, ctrl: Bool) {
-        defer { capturingShortcut = false }
-        guard key != "Escape" else { return }
-        guard let wanted = Shortcut.from(
-            control: ctrl,
-            option: pressedModifiers.contains(.option),
-            shift: pressedModifiers.contains(.shift),
-            command: pressedModifiers.contains(.command),
-            key: key.count == 1 ? key.uppercased() : key
-        ) else { return }
-
-        // Only keep it if the system actually hands it over, so there is never
-        // a moment with no shortcut (Settings.ShortcutNeverConflicts).
-        guard shortcutChanged(wanted) else {
-            shortcutRefused = wanted
-            return
-        }
-        settings.shortcut = wanted
-        shortcutRefused = nil
-        store.save(settings)
-    }
-
-    /// The modifiers held down right now, which the panel keeps up to date.
-    var pressedModifiers: Modifiers = []
-
-    /// A shortcut another app already holds, so the settings can say so.
-    var shortcutRefused: Shortcut?
-
-    struct Modifiers: OptionSet {
-        let rawValue: Int
-        static let option = Modifiers(rawValue: 1 << 0)
-        static let shift = Modifiers(rawValue: 1 << 1)
-        static let command = Modifiers(rawValue: 1 << 2)
-    }
-
-    /// Settings that change the panel apply at once, not on the next open, and
-    /// are kept for the next launch.
-    private func applySettings(changed row: SettingsRow) {
-        if !ranges.contains(days) { days = settings.defaultRange }
-        mode = initialMode(settings.keys)
-        // Demo mode must not touch the real settings or any account.
-        guard !isDemo else { return }
-        store.save(settings)
-        // Only switching a calendar on or off changes what there is to read,
-        // so the other settings never set off a fetch.
-        if case .calendar = row.kind {
-            Task { await refresh() }
-        }
-        if case .refreshMinutes = row.kind {
-            startTimer()
-        }
-        if case .shortcut = row.kind {
-            _ = shortcutChanged(settings.shortcut)
-        }
-    }
-
-    private func open(_ item: Item?) {
-        let link = linkOf(item)
-        guard !link.isEmpty, let url = URL(string: link) else { return }
-        NSWorkspace.shared.open(url)
-        closePanel()
+    /// Made-up data, in place of every real source.
+    func startDemo() {
+        isDemo = true
+        state = PanelState(settings: sampleSettings, snapshot: sampleSnapshot(now: sampleNow()))
+        state.calendars = sampleCalendars
+        state.mailConnected = true
     }
 }
