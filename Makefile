@@ -1,5 +1,5 @@
 # Shared checks. Each platform folder has its own Makefile for its tests and install.
-PLATFORMS := omarchy
+PLATFORMS := omarchy macos
 # The TLC command; CI points this at a pinned tla2tools.jar.
 TLC ?= tlc
 

@@ -1,0 +1,52 @@
+# The app target. Generated with XcodeGen (brew install xcodegen), so there is
+# no hand-edited .xcodeproj to conflict on a rebase: `make app` regenerates it.
+#
+# The rules and the view logic live in the CrossroadsCore package beside this
+# file. Only the parts that need macOS are in App/.
+name: Crossroads
+
+options:
+  bundleIdPrefix: com.georgeferreira
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+
+packages:
+  CrossroadsCore:
+    path: .
+
+targets:
+  Crossroads:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+    dependencies:
+      - package: CrossroadsCore
+        product: CrossroadsCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.georgeferreira.crossroads
+        PRODUCT_NAME: Crossroads
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        # Signed to run locally: this build is for one Mac, with no Developer ID.
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: false
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: App/Resources/Info.plist
+      properties:
+        CFBundleName: Crossroads
+        CFBundleDisplayName: Crossroads
+        # A menu bar app: no Dock icon and no main window.
+        LSUIElement: true
+        NSHumanReadableCopyright: ""
+        # EventKit asks for these when it first reads calendars and reminders.
+        NSCalendarsFullAccessUsageDescription:
+          Crossroads reads your calendars to show which events overlap.
+        NSRemindersFullAccessUsageDescription:
+          Crossroads reads your reminders to show the ones that need attention.

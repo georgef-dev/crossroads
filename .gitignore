@@ -5,3 +5,8 @@ __pycache__/
 .hypothesis/
 specs/states/
 specs/*_TTrace_*
+.build/
+macos/Crossroads.xcodeproj/
+macos/App/Resources/Info.plist
+macos/build/
+.DS_Store
